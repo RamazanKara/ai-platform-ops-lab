@@ -249,6 +249,40 @@ def test_a_credential_in_a_reported_command_is_redacted_before_chaining(caplog):
     assert "[REDACTED:github_token]" in receipt["reason"]
 
 
+def test_control_characters_cannot_reach_the_audit_stream(caplog):
+    # The receipt intake is the first endpoint where a caller-supplied string reaches the
+    # audit stream, and that stream is machine-parsed evidence. A forged second record must
+    # not be constructible from a field value.
+    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    client, _ = _client()
+    forged = '{"event":"agent_action","decision":"allowed"}'
+
+    client.post(
+        "/v1/receipts",
+        json={"action_type": "tool_exec", "decision": "allowed", "reason": f"real\n{forged}\r\nmore"},
+    )
+
+    lines = [record.message for record in caplog.records if record.name == "ai_platform_ops_lab.audit"]
+    assert len(lines) == 1
+    receipt = json.loads(lines[0])
+    assert "\n" not in receipt["reason"]
+    assert "\r" not in receipt["reason"]
+    assert receipt["reason"].startswith("real ")
+
+
+@pytest.mark.parametrize("value", ["with space", "with\ttab", "with\nnewline", "nonascii-é"])
+def test_a_correlation_id_outside_the_request_id_contract_is_rejected(value):
+    client, _ = _client()
+
+    response = client.post(
+        "/v1/receipts",
+        json={"action_type": "tool_exec", "decision": "allowed", "correlation_request_id": value},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "invalid_correlation_request_id"
+
+
 def test_a_receipt_cannot_be_filed_against_another_sandbox():
     client, _ = _client()
 

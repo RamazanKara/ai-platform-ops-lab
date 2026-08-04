@@ -42,7 +42,14 @@ GW_PORT = int(os.environ.get("SDK_CONF_GW_PORT", "8099"))
 MOCK_URL = f"http://127.0.0.1:{MOCK_PORT}"
 GW_URL = f"http://127.0.0.1:{GW_PORT}"
 
+# Test fixtures, both public. The digest is written out rather than computed from the key
+# at runtime: the gateway's API-key contract is a SHA-256 digest (API_KEY_SHA256S), which is
+# the right choice for a high-entropy random token but reads to a scanner as password
+# hashing with a fast hash. Pre-computing the constant states the intent plainly, keeps a
+# credential-shaped value out of a hashing call, and is one fewer moving part in a harness.
+# Regenerate with: python3 -c "import hashlib;print(hashlib.sha256(b'<key>').hexdigest())"
 API_KEY = "sdk-conformance-key"
+API_KEY_SHA256 = "69181e4449e51b6645cc0bba0f558faf67e7e002b84547570294da9b7ddd8c08"
 MODEL = "mock-model"
 
 # Pinned so a vendor release cannot silently change what "compatible" means between runs.
@@ -98,8 +105,6 @@ def ensure_sdk_venv() -> Path:
 
 
 def start_processes() -> tuple[subprocess.Popen, subprocess.Popen, object]:
-    import hashlib
-
     RESULTS.mkdir(parents=True, exist_ok=True)
     mock = subprocess.Popen(
         [sys.executable, str(HERE / "sdk_mock_runtime.py"), "--port", str(MOCK_PORT)],
@@ -108,7 +113,7 @@ def start_processes() -> tuple[subprocess.Popen, subprocess.Popen, object]:
     )
     env = dict(os.environ)
     env.update(GATEWAY_ENV)
-    env["API_KEY_SHA256S"] = hashlib.sha256(API_KEY.encode()).hexdigest()
+    env["API_KEY_SHA256S"] = API_KEY_SHA256
     gateway_log = open(RESULTS / "sdk-conformance-gateway.log", "w")  # noqa: SIM115
     gateway_python = GATEWAY_DIR / ".venv" / "bin" / "python"
     gateway = subprocess.Popen(

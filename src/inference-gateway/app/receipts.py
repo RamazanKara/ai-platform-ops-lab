@@ -35,6 +35,12 @@ AGENT_ACTION_TYPES = frozenset(
 )
 RECEIPT_DECISIONS = frozenset({"allowed", "denied"})
 _SHA256_HEX = re.compile(r"^[0-9a-f]{64}$")
+# C0/C1 control characters and DEL. This is the first endpoint where a caller-supplied
+# string reaches the audit stream, and that stream is machine-parsed evidence. The JSON
+# encoder already escapes these, so a forged record cannot be injected through it, but the
+# guarantee should not rest on a distant `json.dumps` call: a newline serves no purpose in
+# a receipt field, and downstream SIEM parsers do not all handle escapes identically.
+_CONTROL_CHARACTERS = re.compile(r"[\x00-\x1f\x7f-\x9f]")
 
 
 class ReceiptRequest(BaseModel):
@@ -81,6 +87,15 @@ def validate_receipt(payload: ReceiptRequest, settings: Settings) -> None:
                 "receipt_field_too_large",
                 f"{name} has {len(value)} characters; limit is {limit}",
             )
+    # The correlation id is held to the same contract as an inbound X-Request-ID (visible
+    # ASCII, no spaces) rather than merely stripped, because it is matched across chains
+    # and a lookup key that can carry whitespace is a lookup key that silently misses.
+    correlation = payload.correlation_request_id
+    if correlation is not None and any(not (33 <= ord(char) <= 126) for char in correlation):
+        raise AdmissionPolicyError(
+            "invalid_correlation_request_id",
+            "correlation_request_id must be visible ASCII characters without spaces",
+        )
 
 
 def build_receipt_event(payload: ReceiptRequest, settings: Settings, *, sandbox_id: str) -> dict[str, Any]:
@@ -105,8 +120,12 @@ def build_receipt_event(payload: ReceiptRequest, settings: Settings, *, sandbox_
 
 
 def _redacted(value: str | None, settings: Settings) -> str | None:
-    """Return the value with any recognized secret or blocked term substituted out."""
+    """Return the value stripped of control characters and with secrets substituted out.
+
+    Order matters: control characters go first, so a credential split across an embedded
+    newline cannot slip past the redaction patterns that run after.
+    """
     if value is None:
         return None
-    redacted, _ = settings.redact_output_text(value)
+    redacted, _ = settings.redact_output_text(_CONTROL_CHARACTERS.sub(" ", value))
     return redacted
