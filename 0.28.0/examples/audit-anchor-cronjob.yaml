@@ -1,0 +1,172 @@
+# Audit-chain head-anchoring CronJob (DOCUMENTED EXAMPLE, not rendered by validate).
+#
+# This example periodically anchors the gateway's tamper-evident audit hash chain: it pulls
+# the gateway's redacted audit JSON out of Loki, runs scripts/audit-anchor.py to compute the
+# per-chain head ({chain_id, count, last record_hash}), and stores that head in a ConfigMap.
+# A later `audit-verify --anchor <file>` (or the same job in verify mode) compares freshly
+# observed heads against the stored anchor and detects a wholesale re-chain, a shrunk chain
+# (rollback/truncation), or a missing chain: the one thing the in-record chain alone cannot
+# catch (ADR 0006).
+#
+# WHY THIS IS AN EXAMPLE, NOT A RENDERED MANIFEST:
+# The log SOURCE is inherently environment-specific: the Loki service URL, whether multi-tenancy
+# (X-Scope-OrgID) is on, the LogQL selector that matches your gateway pods, the lookback window,
+# and RBAC to patch the ConfigMap all vary per cluster. Rendering a single "correct" manifest
+# through kubeconform/helm would bake in choices that are wrong for most clusters and would read
+# as working when it is not. So this ships under docs/examples/ (which scripts/validate.sh does
+# not render) as a copy-adapt starting point. See runbooks/audit-chain.md for the procedure and
+# the offline auditor path.
+#
+# ADAPT BEFORE APPLYING:
+#   - Set the Loki URL, the LogQL selector, and the lookback (--since) to your gateway.
+#   - If Loki auth_enabled=true, add the X-Scope-OrgID header (see -H below) end to end.
+#   - Pin `image:` to an image that contains python3 + this repo's scripts/ (or bake a tiny
+#     sidecar image; the kit's scripts are stdlib-only, so any python:3-alpine works with the
+#     script mounted via ConfigMap).
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: audit-anchor
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: audit-anchor
+    app.kubernetes.io/component: audit-integrity
+    app.kubernetes.io/part-of: private-ai-platform-kit
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: audit-anchor
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: audit-anchor
+    app.kubernetes.io/part-of: private-ai-platform-kit
+rules:
+  # Least privilege: only the single named anchor ConfigMap, only get/update/patch.
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: audit-anchor
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: audit-anchor
+    app.kubernetes.io/part-of: private-ai-platform-kit
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: audit-anchor
+subjects:
+  - kind: ServiceAccount
+    name: audit-anchor
+    namespace: monitoring
+---
+# Seed ConfigMap the CronJob updates in place. The committed head lives under head.json.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: audit-chain-anchor
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: audit-anchor
+    app.kubernetes.io/part-of: private-ai-platform-kit
+data:
+  head.json: "{}"
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: audit-anchor
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: audit-anchor
+    app.kubernetes.io/component: audit-integrity
+    app.kubernetes.io/part-of: private-ai-platform-kit
+    platform.ai/cost-center: platform
+    platform.ai/owner: platform-team
+spec:
+  # Anchor hourly. A shorter interval shrinks the window in which a rewrite of the most recent
+  # records could slip between two anchors.
+  schedule: "0 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 600
+      backoffLimit: 1
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: audit-anchor
+            app.kubernetes.io/part-of: private-ai-platform-kit
+        spec:
+          serviceAccountName: audit-anchor
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: audit-anchor
+              # Any python:3-alpine works; the scripts are stdlib-only. Mount scripts/ via a
+              # ConfigMap or bake them into an image. kubectl is used to patch the ConfigMap.
+              image: ghcr.io/ramazankara/audit-anchor:REPLACE_ME
+              imagePullPolicy: IfNotPresent
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  set -euo pipefail
+                  # 1) Pull the gateway audit stream from Loki. ADAPT the selector, the URL,
+                  #    and the lookback. Add: -H "X-Scope-OrgID: <tenant>" if auth_enabled=true.
+                  LOKI="${LOKI_URL:-http://loki.monitoring.svc.cluster.local:3100}"
+                  QUERY='{app_kubernetes_io_name="inference-gateway"} |= "record_hash"'
+                  wget -qO- --header="Accept: application/json" \
+                    "${LOKI}/loki/api/v1/query_range?query=$(python3 -c 'import urllib.parse,os;print(urllib.parse.quote(os.environ["QUERY"]))')&since=${SINCE:-2h}&limit=5000" \
+                    | python3 -c 'import sys,json; [print(v[1]) for r in json.load(sys.stdin)["data"]["result"] for v in r["values"]]' \
+                    > /tmp/audit.log
+                  # 2) Verify + anchor. Refuses (non-zero) if the observed chain is already broken.
+                  python3 /scripts/audit-anchor.py /tmp/audit.log -o /tmp/head.json
+                  # 3) Commit the head into the ConfigMap for the next run's --anchor comparison.
+                  kubectl -n monitoring create configmap audit-chain-anchor \
+                    --from-file=head.json=/tmp/head.json --dry-run=client -o yaml \
+                    | kubectl -n monitoring apply -f -
+              env:
+                - name: LOKI_URL
+                  value: http://loki.monitoring.svc.cluster.local:3100
+                - name: SINCE
+                  value: "2h"
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 250m
+                  memory: 256Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop:
+                    - ALL
+              volumeMounts:
+                - name: scripts
+                  mountPath: /scripts
+                  readOnly: true
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            # Mount the kit's stdlib-only verifier + anchor scripts. Create with, e.g.:
+            #   kubectl -n monitoring create configmap audit-anchor-scripts \
+            #     --from-file=scripts/audit-anchor.py --from-file=scripts/audit-verify.py
+            - name: scripts
+              configMap:
+                name: audit-anchor-scripts
+                defaultMode: 0555
+            - name: tmp
+              emptyDir: {}
