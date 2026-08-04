@@ -24,3 +24,19 @@ that failure. Record the platform limitation and remediate it at the account lev
 Run the audit after renaming CI jobs because required-check context names are exact. Never run
 `--apply` against a fork or mirror without first reviewing the resolved repository printed by
 `gh repo view`.
+
+## Why `enforce_admins` is false
+
+The declaration sets `enforce_admins: false` deliberately. GitHub does not allow approving your
+own pull request, so `required_approving_review_count: 1` cannot be satisfied by a sole
+maintainer. With admin enforcement on, cutting a release meant temporarily deleting a
+branch-protection control and restoring it afterwards, which turns a bypass into routine
+procedure and is worse than not claiming the control.
+
+What still holds for everyone, maintainer included: all ten required status checks must pass,
+conversations must be resolved, force pushes and deletions stay blocked, and a contributor's
+pull request still needs a review. What changed is only that the maintainer can merge their own
+reviewed work without a second account.
+
+Revisit this the moment the project has more than one maintainer with write access; at that
+point the review requirement becomes satisfiable and `enforce_admins` should go back to true.
