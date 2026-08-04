@@ -27,6 +27,7 @@ exec trivy fs \
   --severity HIGH,CRITICAL \
   --exit-code 1 \
   --timeout 10m \
+  --ignorefile .trivyignore.yaml \
   --helm-kube-version 1.31.4 \
   --skip-dirs .tools \
   --skip-dirs results \

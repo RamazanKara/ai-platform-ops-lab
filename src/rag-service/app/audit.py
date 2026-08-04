@@ -1,4 +1,4 @@
-"""Redacted request fingerprints and tamper-evident audit-chain primitives.
+"""Tamper-evident audit-chain primitives for RAG retrieval receipts.
 
 A chain covers one process lifetime: every receipt is hash-linked to its predecessor, so
 an edit, insertion, deletion, or reordering *within* that lifetime is detectable. On its
@@ -24,13 +24,13 @@ from typing import Any, Protocol
 
 from fastapi import Request
 
-from app.settings import Settings, message_prompt_chars
+from app.settings import Settings
 
 AUDIT_GENESIS = hashlib.sha256(b"genesis").hexdigest()
 
 
 def chain_audit_event(request: Request, event: dict[str, Any]) -> None:
-    """Hash-link an audit event into the current gateway process chain."""
+    """Hash-link an audit event into the current RAG service process chain."""
     state = request.app.state
     previous = getattr(state, "audit_prev_hash", AUDIT_GENESIS)
     event["prev_hash"], event["record_hash"] = advance_chain(previous, event)
@@ -71,7 +71,7 @@ class MemoryChainStore:
     """Process-local head store: keeps the API uniform but provides no continuity.
 
     The default, because continuity needs storage that outlives the pod and the kit does
-    not get to assume the operator has provisioned any. A gateway running on this backend
+    not get to assume the operator has provisioned any. A service running on this backend
     emits ``chain_start`` records with no predecessor, which is honest: there is nothing
     to link to.
     """
@@ -89,7 +89,7 @@ class MemoryChainStore:
 
 
 class FileChainStore:
-    """Head store backed by a JSON file, for a gateway with a mounted volume.
+    """Head store backed by a JSON file, for a service with a mounted volume.
 
     Writes are atomic (temp file plus rename) so a crash mid-write leaves the previous
     head intact rather than a truncated file that would read as a missing predecessor.
@@ -122,7 +122,7 @@ class FileChainStore:
 
 
 class RedisChainStore:
-    """Head store backed by Redis, for a gateway that already depends on it."""
+    """Head store backed by Redis, for a deployment that already runs one."""
 
     backend = "redis"
 
@@ -132,7 +132,7 @@ class RedisChainStore:
             try:
                 import redis
             except ImportError as exc:  # pragma: no cover - redis ships in the gateway image
-                raise RuntimeError("redis package is required when AUDIT_CHAIN_STORE_BACKEND=redis") from exc
+                raise RuntimeError("redis package is required when RAG_AUDIT_CHAIN_STORE_BACKEND=redis") from exc
             client = redis.Redis.from_url(
                 settings.audit_chain_store_redis_url,
                 decode_responses=True,
@@ -192,51 +192,3 @@ def chain_start_event(chain_id: str, previous: ChainHead | None) -> dict[str, An
         "previous_head": previous.head if previous else None,
         "previous_count": previous.count if previous else None,
     }
-
-
-def payload_fingerprint(payload: dict[str, Any]) -> dict[str, Any]:
-    """Summarize a payload into redacted counts and complete canonical hashes."""
-    messages = payload.get("messages") or []
-    raw_text_field = payload.get("input")
-    if raw_text_field is None:
-        raw_text_field = payload.get("prompt")
-    if not messages and raw_text_field is not None:
-        texts = [str(item) for item in (raw_text_field if isinstance(raw_text_field, list) else [raw_text_field])]
-        canonical = json.dumps(texts, sort_keys=True, separators=(",", ":"))
-        result = {
-            "input_count": len(texts),
-            "prompt_chars": sum(len(text) for text in texts),
-            "prompt_sha256": hashlib.sha256(canonical.encode("utf-8")).hexdigest(),
-        }
-        request_canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
-        result["request_sha256"] = hashlib.sha256(request_canonical.encode("utf-8")).hexdigest()
-        return result
-
-    canonical_messages = []
-    roles = []
-    tool_call_count = 0
-    for message in messages:
-        role = str(message.get("role", "unknown"))
-        roles.append(role)
-        canonical_messages.append(message)
-        tool_calls = message.get("tool_calls")
-        if isinstance(tool_calls, list):
-            tool_call_count += len(tool_calls)
-    canonical_prompt: dict[str, Any] = {"messages": canonical_messages}
-    for field in ("tools", "functions", "tool_choice", "function_call", "response_format"):
-        if field in payload:
-            canonical_prompt[field] = payload[field]
-    canonical = json.dumps(canonical_prompt, sort_keys=True, separators=(",", ":"), default=str)
-    request_canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
-    fingerprint: dict[str, Any] = {
-        "message_count": len(messages),
-        "message_roles": roles,
-        "prompt_chars": message_prompt_chars(messages),
-        "prompt_sha256": hashlib.sha256(canonical.encode("utf-8")).hexdigest(),
-        "request_sha256": hashlib.sha256(request_canonical.encode("utf-8")).hexdigest(),
-    }
-    if payload.get("tools"):
-        fingerprint["tool_count"] = len(payload["tools"])
-    if tool_call_count:
-        fingerprint["tool_call_count"] = tool_call_count
-    return fingerprint

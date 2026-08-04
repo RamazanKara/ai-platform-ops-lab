@@ -17,7 +17,15 @@ from fastapi.staticfiles import StaticFiles
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.audit import AUDIT_GENESIS, chain_audit_event, payload_fingerprint
+from app.audit import (
+    AUDIT_GENESIS,
+    ChainHead,
+    advance_chain,
+    build_chain_store,
+    chain_audit_event,
+    chain_start_event,
+    payload_fingerprint,
+)
 from app.batch_api import register_batch_routes
 from app.batchstore import build_batch_store
 from app.body_limit import RequestBodyLimitMiddleware
@@ -32,12 +40,19 @@ from app.guardrails import _apply_output_guardrail, _apply_prompt_secret_mode
 from app.jwt_auth import JwksUnavailableError, JwtVerifier
 from app.key_records import KeyRecordSet, key_record_effective_budget_updates
 from app.messages import (
+    AnthropicStreamTranslator,
     MessagesRequest,
+    anthropic_stream_error_event,
     anthropic_to_chat_payload,
     chat_completion_to_anthropic,
+    iter_sse_data_objects,
 )
 from app.metrics import (
     ADMISSION_REJECTIONS,
+    AGENT_RECEIPTS,
+    AUDIT_CHAIN_PERSIST,
+    BUDGET_SETTLED_TOKENS,
+    BUDGET_SETTLEMENTS,
     CACHE_LOOKUPS,
     CANARY_ROUTED,
     ESTIMATED_COST,
@@ -58,6 +73,7 @@ from app.metrics import (
 from app.objectstore import build_object_store
 from app.policy import ModelRoutingPolicy, SandboxPolicySet
 from app.ratelimit import build_rate_limiter
+from app.receipts import ReceiptRequest, build_receipt_event, validate_receipt
 from app.request_context import (
     ApiKeyOutcome,
     _api_key_principal,
@@ -111,7 +127,7 @@ _chain_audit_event = chain_audit_event
 _payload_fingerprint = payload_fingerprint
 
 AUDIT_LOGGER = logging.getLogger("ai_platform_ops_lab.audit")
-SERVICE_VERSION = "0.27.1"
+SERVICE_VERSION = "0.28.0"
 OPENAPI_DESCRIPTION = (
     "OpenAI-compatible private inference gateway with sandbox traceability, "
     "admission controls, budget enforcement, redacted audit events, and "
@@ -172,6 +188,159 @@ def _record_budget_reservation(reservation: BudgetReservation | None, settings: 
     for budget_type, value in usage.items():
         SANDBOX_BUDGET_USAGE.labels(_sandbox_label(reservation.sandbox_id), budget_type).set(value)
         SANDBOX_BUDGET_LIMIT.labels(_sandbox_label(reservation.sandbox_id), budget_type).set(limits[budget_type])
+
+
+def _emit_audit_record(event: dict[str, Any]) -> None:
+    """Write one already-chained receipt to the audit logger and the operator log."""
+    line = json.dumps(event, sort_keys=True)
+    AUDIT_LOGGER.info(line)
+    logging.getLogger("uvicorn.error").info(line)
+
+
+def _persist_audit_head(app: FastAPI) -> None:
+    """Write the current chain head to the durable store, best effort.
+
+    A head that cannot be persisted costs continuity for the *next* process, not this
+    one, so a failure is counted and logged rather than raised: refusing to serve because
+    a head store is unreachable would trade an evidentiary nicety for an outage.
+    """
+    state = app.state
+    if state.audit_chain_count == getattr(state, "audit_head_persisted_count", None):
+        return
+    try:
+        state.chain_store.save(
+            ChainHead(
+                chain_id=state.audit_chain_id,
+                head=state.audit_prev_hash,
+                count=state.audit_chain_count,
+            )
+        )
+    except Exception:
+        AUDIT_CHAIN_PERSIST.labels("error").inc()
+        logging.getLogger("uvicorn.error").exception("audit chain head could not be persisted")
+        return
+    state.audit_head_persisted_count = state.audit_chain_count
+    AUDIT_CHAIN_PERSIST.labels("ok").inc()
+
+
+def open_audit_chain(app: FastAPI) -> dict[str, Any]:
+    """Open this process's chain with a ``chain_start`` receipt naming its predecessor.
+
+    This is the record that turns a set of independent per-process chains into a chain of
+    chains. It is hash-linked like any other receipt, so the claim it makes about the
+    previous chain's head is itself covered by the chain it opens, and a lifetime that was
+    deleted wholesale leaves a successor pointing at a predecessor that is not there.
+    """
+    state = app.state
+    try:
+        previous = state.chain_store.load()
+    except Exception:
+        # An unreadable head store must not stop the gateway from serving; the chain
+        # simply starts without a predecessor, which the record states plainly.
+        logging.getLogger("uvicorn.error").exception("audit chain head could not be read")
+        previous = None
+    event = chain_start_event(state.audit_chain_id, previous)
+    event["ts"] = time()
+    event["prev_hash"], event["record_hash"] = advance_chain(AUDIT_GENESIS, event)
+    state.audit_prev_hash = event["record_hash"]
+    state.audit_chain_count = 1
+    if state.settings.audit_log_enabled:
+        _emit_audit_record(event)
+    _persist_audit_head(app)
+    return event
+
+
+def _route_settings(settings: Settings, model_route: Any) -> Settings:
+    """Apply a route's calibrated chars-per-token to the settings used for budgeting.
+
+    Falls back to the gateway default when the route declares none, so a catalog that has
+    not been calibrated yet behaves exactly as before rather than silently changing what
+    every tenant is charged.
+    """
+    per_token = getattr(model_route, "estimated_chars_per_token", 0)
+    if not per_token or per_token == settings.budget_estimated_chars_per_token:
+        return settings
+    return replace(settings, budget_estimated_chars_per_token=per_token)
+
+
+async def _settle_budget(request: Request, runtime_response: dict[str, Any] | None) -> None:
+    """Reconcile this request's budget reservation against the runtime's measured usage.
+
+    Admission has to charge before the model runs, so it charges the worst case (the full
+    requested completion cap). This is where that estimate is corrected to what the call
+    actually consumed, so the window counter, the ``x-ratelimit-*`` headroom, and the
+    usage and chargeback figures derived from them track real spend rather than the
+    ceiling the caller happened to ask for.
+
+    Two deliberate asymmetries. A settlement never fails a request that already succeeded:
+    the response is committed, and a budget backend that broke afterwards must not turn a
+    served call into an error. And a runtime that reported no usage leaves the reservation
+    standing rather than refunding it, so a request that burns runtime capacity and then
+    fails late is still charged; over-charging is recoverable, free capacity is not.
+    """
+    reservation = getattr(request.state, "budget_reservation_object", None)
+    if reservation is None or getattr(request.state, "budget_settled", False):
+        return
+    # Guard before the await: the streaming and non-streaming paths both reach here, and
+    # a second settlement would refund the same reservation twice.
+    request.state.budget_settled = True
+    tracker: SandboxBudgetTracker = request.app.state.budget_tracker
+    try:
+        settlement = await asyncio.to_thread(tracker.settle, reservation, (runtime_response or {}).get("usage"))
+    except BudgetBackendError:
+        BUDGET_SETTLEMENTS.labels("backend_unavailable").inc()
+        return
+    except Exception:
+        # Deliberately broad: settlement runs after the response is committed, so letting
+        # anything escape would turn a call the client already received into a 500. The
+        # unsettled reservation stands, which can only over-charge. The traceback goes to
+        # the operator log, never to the audit logger, whose every line is a parseable receipt.
+        BUDGET_SETTLEMENTS.labels("error").inc()
+        logging.getLogger("uvicorn.error").exception("budget settlement failed")
+        return
+    if settlement is None:
+        BUDGET_SETTLEMENTS.labels("unreported").inc()
+        return
+    BUDGET_SETTLEMENTS.labels("settled").inc()
+    sandbox_label = _sandbox_label(settlement.sandbox_id)
+    if settlement.refunded_tokens:
+        BUDGET_SETTLED_TOKENS.labels(sandbox_label, "refund").inc(settlement.refunded_tokens)
+    if settlement.overrun_tokens:
+        BUDGET_SETTLED_TOKENS.labels(sandbox_label, "overrun").inc(settlement.overrun_tokens)
+    request.state.budget_settlement = settlement.audit_dict()
+    SANDBOX_BUDGET_USAGE.labels(sandbox_label, "estimated_tokens").set(settlement.settled_estimated_tokens)
+
+
+async def _settle_and_audit(
+    settings: Settings,
+    request: Request,
+    payload: dict[str, Any],
+    *,
+    status_code: int,
+    latency_seconds: float,
+    backend: str,
+    runtime_response: dict[str, Any] | None = None,
+    runtime_status_code: int | None = None,
+    error: str | None = None,
+) -> None:
+    """Settle the sandbox budget against real usage, then write the receipt recording both.
+
+    Every governed endpoint already writes exactly one receipt per request, on the
+    streaming and non-streaming paths alike, so hanging settlement off that single point
+    keeps the correction and its evidence from ever diverging.
+    """
+    await _settle_budget(request, runtime_response)
+    _write_audit_log(
+        settings,
+        request,
+        payload,
+        status_code=status_code,
+        latency_seconds=latency_seconds,
+        backend=backend,
+        runtime_response=runtime_response,
+        runtime_status_code=runtime_status_code,
+        error=error,
+    )
 
 
 def _budget_headers(reservation: BudgetReservation | None, settings: Settings) -> dict[str, str]:
@@ -247,6 +416,10 @@ def _write_audit_log(
         "usage": (runtime_response or {}).get("usage"),
         "error": error,
         "budget": getattr(request.state, "budget_reservation", None),
+        # What the reservation was corrected to once the runtime reported real usage.
+        # Absent when the runtime reported no usage, so a receipt never implies a
+        # reconciliation that did not happen.
+        "budget_settlement": getattr(request.state, "budget_settlement", None),
     }
     event.update(_payload_fingerprint(payload))
     _chain_audit_event(request, event)
@@ -381,12 +554,45 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.rate_limiter = build_rate_limiter(resolved)
     app.state.inflight = 0
     app.state.audit_prev_hash = AUDIT_GENESIS
-    # Per-process audit chain identity: pod identity + process start time. It is stamped
-    # onto every audit event (hash-covered) so the operator verifier can group records into
-    # independent per-replica chains and anchor each head, instead of guessing chain
-    # boundaries from genesis restarts in interleaved multi-replica logs.
-    app.state.audit_chain_id = f"{os.getenv('HOSTNAME', 'gateway')}:{int(time())}"
+    app.state.audit_chain_count = 0
+    # Per-process audit chain identity: pod identity, process start time, and a random
+    # suffix. It is stamped onto every audit event (hash-covered) so the operator verifier
+    # can group records into independent per-replica chains and anchor each head, instead
+    # of guessing chain boundaries from genesis restarts in interleaved multi-replica logs.
+    # The suffix is load-bearing, not decoration: a pod that restarts twice inside one
+    # second (a crashloop, the case where the log matters most) would otherwise mint the
+    # same id twice and the verifier would splice two unrelated chains into one and report
+    # the seam as tampering.
+    app.state.audit_chain_id = f"{os.getenv('HOSTNAME', 'gateway')}:{int(time())}:{uuid4().hex[:8]}"
+    app.state.chain_store = build_chain_store(resolved)
     app.state.background_tasks = set()
+
+    async def _audit_chain_startup() -> None:
+        open_audit_chain(app)
+
+        async def _persist_loop() -> None:
+            # Coalesced rather than per-record: a head store write on the request path
+            # would add a network hop to every governed call. The cost of the interval is
+            # that a hard crash can leave the persisted head a few records behind the true
+            # tail, which the verifier tolerates by checking the successor's named head
+            # appears in the predecessor rather than requiring it to be the last record.
+            while True:
+                await asyncio.sleep(resolved.audit_chain_persist_interval_seconds)
+                await asyncio.to_thread(_persist_audit_head, app)
+
+        task = asyncio.ensure_future(_persist_loop())
+        app.state.audit_persist_task = task
+        app.state.background_tasks.add(task)
+        task.add_done_callback(app.state.background_tasks.discard)
+
+    async def _audit_chain_shutdown() -> None:
+        task = getattr(app.state, "audit_persist_task", None)
+        if task is not None:
+            task.cancel()
+        await asyncio.to_thread(_persist_audit_head, app)
+
+    app.router.add_event_handler("startup", _audit_chain_startup)
+    app.router.add_event_handler("shutdown", _audit_chain_shutdown)
     app.state.response_cache = build_response_cache(resolved)
     app.state.model_routing_policy = (
         ModelRoutingPolicy.from_path(resolved.model_routing_policy_path, resolved)
@@ -732,6 +938,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def sandbox_usage(request: Request) -> dict[str, Any]:
         # Per-sandbox usage plus an estimated monetary cost (the data layer an admin/usage
         # console renders). USD_PER_1K_TOKENS of 0 leaves the cost model off (cost = 0).
+        # The token counts here are settled: each request's worst-case admission estimate
+        # was reconciled against the runtime's reported usage, so the cost figure tracks
+        # what was consumed rather than what callers reserved.
         # Like /v1/sandbox/budget, this reflects only request.state.sandbox_id, which the auth
         # middleware forces to the caller's bound sandbox for a bound principal (JWT tenant
         # claim or an API-key record with a sandbox) - a bound caller cannot read another
@@ -812,6 +1021,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             model_route = chain[0]
             backend = model_route.backend
             payload_dict["model"] = model_route.model_id
+            effective = _route_settings(effective, model_route)
             effective.validate_admission(payload_dict)
             # Redact/flag prompt secrets (non-block modes) before the payload is cached,
             # reserved, or sent - so a redacted credential is never persisted or forwarded.
@@ -837,6 +1047,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             tracker: SandboxBudgetTracker = request.app.state.budget_tracker
             reservation = await asyncio.to_thread(tracker.reserve, request.state.sandbox_id, payload_dict, effective)
             request.state.budget_reservation = reservation.audit_dict() if reservation is not None else None
+            # Keep the reservation object itself: settlement needs the reserved estimate,
+            # and the audit dict above is only a projection of it.
+            request.state.budget_reservation_object = reservation
             _record_budget_reservation(reservation, effective)
             request.state.budget_headers = _budget_headers(reservation, effective)
             client: RuntimeClient = request.app.state.runtime_client
@@ -943,7 +1156,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                             patterns, terms = resolved.output_findings(scanned.decode("utf-8", "ignore"))
                             if patterns or terms:
                                 OUTPUT_GUARDRAIL.labels("flagged_stream", route).inc()
-                        _write_audit_log(
+                        await _settle_and_audit(
                             resolved,
                             request,
                             payload_dict,
@@ -1079,7 +1292,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     _record_estimated_cost(
                         resolved, request.state.sandbox_id, backend, (runtime_response or {}).get("usage")
                     )
-                _write_audit_log(
+                await _settle_and_audit(
                     resolved,
                     request,
                     payload_dict,
@@ -1125,6 +1338,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 raise AdmissionPolicyError("model_not_allowed", str(exc)) from exc
             backend = model_route.backend
             payload_dict["model"] = model_route.model_id
+            effective = _route_settings(effective, model_route)
             # Legacy completions do not use the chat SSE usage/guardrail machinery. Reject
             # streaming explicitly rather than forwarding an unmetered stream.
             if payload_dict.get("stream"):
@@ -1151,6 +1365,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             tracker: SandboxBudgetTracker = request.app.state.budget_tracker
             reservation = await asyncio.to_thread(tracker.reserve, request.state.sandbox_id, budget_payload, effective)
             request.state.budget_reservation = reservation.audit_dict() if reservation is not None else None
+            # Keep the reservation object itself: settlement needs the reserved estimate,
+            # and the audit dict above is only a projection of it.
+            request.state.budget_reservation_object = reservation
             _record_budget_reservation(reservation, effective)
             request.state.budget_headers = _budget_headers(reservation, effective)
             client: RuntimeClient = request.app.state.runtime_client
@@ -1240,7 +1457,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             LATENCY.labels(route, backend).observe(latency_seconds)
             _record_token_usage(backend, runtime_response)
             _record_estimated_cost(resolved, request.state.sandbox_id, backend, (runtime_response or {}).get("usage"))
-            _write_audit_log(
+            await _settle_and_audit(
                 resolved,
                 request,
                 payload_dict,
@@ -1262,8 +1479,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "governance path as POST /v1/chat/completions: model allowlist, admission "
             "limits (including the max_tokens cap), prompt secret policy, sandbox budget, "
             "output guardrail, and audit. Anthropic requires max_tokens; a request omitting "
-            "it is rejected. Streaming is not supported on this endpoint in this release; "
-            "send stream=false or use POST /v1/chat/completions for OpenAI-shaped streaming."
+            "it is rejected. Streaming is supported: stream=true returns the Anthropic "
+            "event sequence (message_start, content_block_start/delta/stop, message_delta, "
+            "message_stop) translated from the same governed chat stream, subject to the "
+            "gateway's streaming admission toggle."
         ),
         operation_id="createMessage",
     )
@@ -1282,6 +1501,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         payload_dict = anthropic_to_chat_payload(payload)
         request_model = payload.model
         request.state.budget_reservation = None
+        # When streaming, the translated event stream records metrics + audit at its own
+        # end-of-stream; the outer finally must not double-record on the headers path.
+        stream_owns_recording = False
         try:
             policy: ModelRoutingPolicy = request.app.state.model_routing_policy
             sandbox_policies: SandboxPolicySet = request.app.state.sandbox_policy_set
@@ -1292,15 +1514,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 raise AdmissionPolicyError("model_not_allowed", str(exc)) from exc
             backend = model_route.backend
             payload_dict["model"] = model_route.model_id
-            # Streaming translation to the Anthropic SSE event sequence is not wired through
-            # the metering/guardrail machinery yet; reject it explicitly (mirroring
-            # /v1/completions' streaming_not_supported) rather than silently forwarding an
-            # unmetered or non-Anthropic-shaped stream.
+            effective = _route_settings(effective, model_route)
             if payload.stream:
-                raise AdmissionPolicyError(
-                    "streaming_not_supported",
-                    "streaming is not supported on /v1/messages; use /v1/chat/completions",
-                )
+                # Mark the translated payload as streaming BEFORE admission so the shared
+                # streaming toggle (ALLOW_STREAMING) governs /v1/messages exactly as it
+                # governs chat, rather than this endpoint carrying its own answer. Usage is
+                # forced on so the terminal message_delta can report real token counts even
+                # when the caller never asked for usage.
+                payload_dict["stream"] = True
+                payload_dict["stream_options"] = {"include_usage": True}
             # Same admission as chat, on the translated messages: enforces the max_tokens
             # cap, message/prompt-size limits, tool checks, and prompt-secret BLOCK mode.
             effective.validate_admission(payload_dict)
@@ -1312,9 +1534,100 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             tracker: SandboxBudgetTracker = request.app.state.budget_tracker
             reservation = await asyncio.to_thread(tracker.reserve, request.state.sandbox_id, payload_dict, effective)
             request.state.budget_reservation = reservation.audit_dict() if reservation is not None else None
+            # Keep the reservation object itself: settlement needs the reserved estimate,
+            # and the audit dict above is only a projection of it.
+            request.state.budget_reservation_object = reservation
             _record_budget_reservation(reservation, effective)
             request.state.budget_headers = _budget_headers(reservation, effective)
             client: RuntimeClient = request.app.state.runtime_client
+            if payload_dict.get("stream"):
+                # Single-route chain: /v1/messages resolves one model rather than a fallback
+                # chain, so this reuses the chat opener without inventing failover behavior
+                # the non-streaming path on this endpoint does not have.
+                stream, stream_backend, used_model, first_chunk = await _open_stream_with_fallback(
+                    client, [model_route], payload_dict, request
+                )
+                backend = stream_backend
+                payload_dict["model"] = used_model
+                stream_owns_recording = True
+                translator = AnthropicStreamTranslator(request_model=request_model)
+
+                async def stream_body() -> Any:
+                    stream_status = "200"
+                    stream_status_code = 200
+                    stream_error: str | None = None
+                    # SSE events can split across network chunks; carry the trailing partial
+                    # line so no chunk object is ever parsed from half a ``data:`` line.
+                    # Bounded so a never-terminated line cannot grow memory.
+                    pending = b""
+                    try:
+                        chunk = first_chunk
+                        while chunk is not None:
+                            buffered = pending + chunk
+                            complete_lines, newline, pending = buffered.rpartition(b"\n")
+                            pending = pending[-65536:]
+                            segment = complete_lines + newline
+                            if segment:
+                                for parsed in iter_sse_data_objects(segment):
+                                    events = translator.feed(parsed)
+                                    if events:
+                                        yield events
+                            try:
+                                chunk = await stream.__anext__()
+                            except StopAsyncIteration:
+                                break
+                        if pending:
+                            for parsed in iter_sse_data_objects(pending):
+                                events = translator.feed(parsed)
+                                if events:
+                                    yield events
+                        yield translator.finish()
+                    except httpx.HTTPError as exc:
+                        # Upstream failed after headers were sent. An Anthropic client parses
+                        # named events, so the failure is reported as a terminal ``error``
+                        # event rather than the OpenAI-shaped error object.
+                        stream_status = "502"
+                        stream_status_code = 502
+                        stream_error = "runtime stream failed"
+                        AUDIT_LOGGER.debug("runtime stream error: %s", type(exc).__name__)
+                        yield anthropic_stream_error_event(
+                            "runtime stream failed",
+                            request_id=request.state.request_id,
+                            sandbox_id=request.state.sandbox_id,
+                        )
+                    finally:
+                        latency_seconds = perf_counter() - start
+                        REQUESTS.labels(route, stream_backend, stream_status).inc()
+                        SANDBOX_REQUESTS.labels(
+                            _sandbox_label(request.state.sandbox_id), stream_backend, stream_status
+                        ).inc()
+                        LATENCY.labels(route, stream_backend).observe(latency_seconds)
+                        stream_usage = translator.usage
+                        usage_response = {"usage": stream_usage} if stream_usage is not None else None
+                        _record_token_usage(stream_backend, usage_response)
+                        _record_estimated_cost(resolved, request.state.sandbox_id, stream_backend, stream_usage)
+                        # The streamed bytes are committed, so the guardrail detects and flags
+                        # at end-of-stream (enforcement stays on the non-streaming path). The
+                        # translator kept the decoded text, so the scan sees real text rather
+                        # than its JSON escaping.
+                        if resolved.output_guardrail_enabled and translator.scanned_text:
+                            patterns, terms = resolved.output_findings(translator.scanned_text)
+                            if patterns or terms:
+                                OUTPUT_GUARDRAIL.labels("flagged_stream", route).inc()
+                        await _settle_and_audit(
+                            resolved,
+                            request,
+                            payload_dict,
+                            status_code=stream_status_code,
+                            latency_seconds=latency_seconds,
+                            backend=stream_backend,
+                            runtime_response=usage_response,
+                            error=stream_error,
+                        )
+
+                # FastAPI streams this Response object directly; the dict[str, Any] return
+                # annotation describes the JSON path and drives the OpenAPI response schema.
+                return StreamingResponse(stream_body(), media_type="text/event-stream")  # type: ignore[return-value]
             runtime_response = await client.chat_completions(
                 payload_dict,
                 headers=_runtime_headers(request),
@@ -1399,26 +1712,31 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 },
             ) from exc
         finally:
-            REQUESTS.labels(route, backend, status).inc()
-            SANDBOX_REQUESTS.labels(_sandbox_label(request.state.sandbox_id), backend, status).inc()
-            latency_seconds = perf_counter() - start
-            LATENCY.labels(route, backend).observe(latency_seconds)
-            _record_token_usage(backend, runtime_response)
-            _record_estimated_cost(resolved, request.state.sandbox_id, backend, (runtime_response or {}).get("usage"))
-            # Audit the translated (OpenAI-shaped) payload_dict so the fingerprint (message
-            # count, roles, prompt hash) is computed the same way as chat - /v1/messages
-            # traffic is attributable with the identical redacted receipt shape.
-            _write_audit_log(
-                resolved,
-                request,
-                payload_dict,
-                status_code=status_code,
-                latency_seconds=latency_seconds,
-                backend=backend,
-                runtime_response=runtime_response,
-                runtime_status_code=runtime_status_code,
-                error=error,
-            )
+            # Streaming responses record at end-of-stream inside stream_body(); the outer
+            # finally only records the non-streaming and error-before-headers paths.
+            if not stream_owns_recording:
+                REQUESTS.labels(route, backend, status).inc()
+                SANDBOX_REQUESTS.labels(_sandbox_label(request.state.sandbox_id), backend, status).inc()
+                latency_seconds = perf_counter() - start
+                LATENCY.labels(route, backend).observe(latency_seconds)
+                _record_token_usage(backend, runtime_response)
+                _record_estimated_cost(
+                    resolved, request.state.sandbox_id, backend, (runtime_response or {}).get("usage")
+                )
+                # Audit the translated (OpenAI-shaped) payload_dict so the fingerprint (message
+                # count, roles, prompt hash) is computed the same way as chat - /v1/messages
+                # traffic is attributable with the identical redacted receipt shape.
+                await _settle_and_audit(
+                    resolved,
+                    request,
+                    payload_dict,
+                    status_code=status_code,
+                    latency_seconds=latency_seconds,
+                    backend=backend,
+                    runtime_response=runtime_response,
+                    runtime_status_code=runtime_status_code,
+                    error=error,
+                )
 
     @app.post(
         "/v1/responses",
@@ -1481,6 +1799,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 raise AdmissionPolicyError("model_not_allowed", str(exc)) from exc
             backend = model_route.backend
             payload_dict["model"] = model_route.model_id
+            effective = _route_settings(effective, model_route)
             # Streaming translation to the Responses SSE event sequence is not wired through
             # the metering/guardrail machinery yet; reject it explicitly (mirroring
             # /v1/completions & /v1/messages' streaming_not_supported) rather than silently
@@ -1503,6 +1822,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             tracker: SandboxBudgetTracker = request.app.state.budget_tracker
             reservation = await asyncio.to_thread(tracker.reserve, request.state.sandbox_id, payload_dict, effective)
             request.state.budget_reservation = reservation.audit_dict() if reservation is not None else None
+            # Keep the reservation object itself: settlement needs the reserved estimate,
+            # and the audit dict above is only a projection of it.
+            request.state.budget_reservation_object = reservation
             _record_budget_reservation(reservation, effective)
             request.state.budget_headers = _budget_headers(reservation, effective)
             client: RuntimeClient = request.app.state.runtime_client
@@ -1606,7 +1928,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             # Audit the translated (OpenAI-shaped) payload_dict so the fingerprint (message
             # count, roles, prompt hash) is computed the same way as chat - /v1/responses
             # traffic is attributable with the identical redacted receipt shape.
-            _write_audit_log(
+            await _settle_and_audit(
                 resolved,
                 request,
                 payload_dict,
@@ -1677,6 +1999,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 raise AdmissionPolicyError("model_not_allowed", str(exc)) from exc
             backend = model_route.backend
             payload_dict["model"] = model_route.model_id
+            effective = _route_settings(effective, model_route)
             effective.validate_embedding_admission(payload_dict)
             prompt_action = _apply_prompt_secret_mode(effective, payload_dict, route)
             if prompt_action:
@@ -1688,6 +2011,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             tracker: SandboxBudgetTracker = request.app.state.budget_tracker
             reservation = await asyncio.to_thread(tracker.reserve, request.state.sandbox_id, budget_payload, effective)
             request.state.budget_reservation = reservation.audit_dict() if reservation is not None else None
+            # Keep the reservation object itself: settlement needs the reserved estimate,
+            # and the audit dict above is only a projection of it.
+            request.state.budget_reservation_object = reservation
             _record_budget_reservation(reservation, effective)
             request.state.budget_headers = _budget_headers(reservation, effective)
             client: RuntimeClient = request.app.state.runtime_client
@@ -1776,7 +2102,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             LATENCY.labels(route, backend).observe(latency_seconds)
             _record_token_usage(backend, runtime_response)
             _record_estimated_cost(resolved, request.state.sandbox_id, backend, (runtime_response or {}).get("usage"))
-            _write_audit_log(
+            await _settle_and_audit(
                 resolved,
                 request,
                 payload_dict,
@@ -1843,7 +2169,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             SANDBOX_REQUESTS.labels(_sandbox_label(request.state.sandbox_id), resolved.runtime_backend, status).inc()
             latency_seconds = perf_counter() - start
             LATENCY.labels(route, resolved.runtime_backend).observe(latency_seconds)
-            _write_audit_log(
+            await _settle_and_audit(
                 resolved,
                 request,
                 payload_dict,
@@ -2016,6 +2342,85 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     async def batch_inference(request: Request, payload: BatchRequest) -> dict[str, Any]:
         return await _run_batch(request, payload, "/v1/batch-inference")
+
+    @app.post(
+        "/v1/receipts",
+        tags=["sandbox"],
+        summary="Record an agent action on the audit chain",
+        description=(
+            "Agent-action receipt intake (ADR 0014). Records what a workspace did beyond "
+            "calling a model (denied egress, tool execution, file writes, credential "
+            "requests) on the SAME tamper-evident hash chain as model calls, so "
+            "'make audit-verify' checks them together. The action_type vocabulary is closed; "
+            "an unknown value is rejected. This endpoint RECORDS claims and enforces nothing: "
+            "a receipt reporting a denial is evidence that some other control denied the "
+            "action, never the control itself, and submitting one permits nothing. The sandbox "
+            "on the receipt is the caller's bound sandbox, so a workspace can only add to its "
+            "own history. Off by default (AGENT_RECEIPTS_ENABLED)."
+        ),
+        operation_id="createAgentReceipt",
+    )
+    async def create_receipt(request: Request, payload: ReceiptRequest) -> dict[str, Any]:
+        route = "/v1/receipts"
+        status = "200"
+        try:
+            if not resolved.agent_receipts_enabled:
+                raise HTTPException(
+                    status_code=404,
+                    detail={
+                        "message": "agent-action receipts are not enabled",
+                        "reason": "receipts_not_enabled",
+                        "request_id": request.state.request_id,
+                        "sandbox_id": request.state.sandbox_id,
+                    },
+                )
+            # request.state.sandbox_id is already forced to the caller's bound sandbox by
+            # the auth middleware. Rejecting a contradicting body value rather than quietly
+            # overwriting it means a mis-configured producer fails loudly instead of filing
+            # its receipts under the wrong tenant.
+            if payload.sandbox_id is not None and payload.sandbox_id != request.state.sandbox_id:
+                status = "403"
+                AGENT_RECEIPTS.labels("rejected", "sandbox_identity_mismatch").inc()
+                raise HTTPException(
+                    status_code=403,
+                    detail={
+                        "message": "receipt sandbox_id does not match the caller's bound sandbox",
+                        "reason": "sandbox_identity_mismatch",
+                        "request_id": request.state.request_id,
+                        "sandbox_id": request.state.sandbox_id,
+                    },
+                )
+            validate_receipt(payload, resolved)
+            event = build_receipt_event(payload, resolved, sandbox_id=request.state.sandbox_id)
+            event["chain_id"] = getattr(request.app.state, "audit_chain_id", None)
+            event["request_id"] = request.state.request_id
+            event["traceparent"] = request.state.traceparent
+            event["principal"] = getattr(request.state, "principal", None)
+            event["ts"] = time()
+            chain_audit_event(request, event)
+            _emit_audit_record(event)
+            AGENT_RECEIPTS.labels(payload.action_type, payload.decision).inc()
+            return {
+                "recorded": True,
+                "chain_id": event["chain_id"],
+                "record_hash": event["record_hash"],
+                "request_id": request.state.request_id,
+                "sandbox_id": request.state.sandbox_id,
+            }
+        except AdmissionPolicyError as exc:
+            status = "400"
+            AGENT_RECEIPTS.labels("rejected", exc.reason).inc()
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "message": str(exc),
+                    "reason": exc.reason,
+                    "request_id": request.state.request_id,
+                    "sandbox_id": request.state.sandbox_id,
+                },
+            ) from exc
+        finally:
+            REQUESTS.labels(route, "gateway", status).inc()
 
     _install_openapi_contract(app, resolved)
     return app

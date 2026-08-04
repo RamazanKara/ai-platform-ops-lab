@@ -108,7 +108,7 @@ Run `make config-contract` after changing settings, env vars, Helm values, or ch
 | `guardrails.promptSecretDetection.patterns` | `["private_key", "github_token", "slack_token", "aws_access_key_id", "google_api_key", "bearer_token", "generic_api_ke...` |
 | `image.pullPolicy` | `IfNotPresent` |
 | `image.repository` | `ghcr.io/ramazankara/private-ai-platform-kit/inference-gateway` |
-| `image.tag` | `v0.27.1` |
+| `image.tag` | `v0.28.0` |
 | `ingress.annotations` | `{}` |
 | `ingress.className` | `""` |
 | `ingress.enabled` | `false` |
@@ -143,6 +143,8 @@ Run `make config-contract` after changing settings, env vars, Helm values, or ch
 | `rateLimit.failOpen` | `false` |
 | `rateLimit.requestsPerWindow` | `0` |
 | `rateLimit.windowSeconds` | `60` |
+| `receipts.enabled` | `false` |
+| `receipts.maxFieldChars` | `256` |
 | `replicaCount` | `1` |
 | `resources.limits.cpu` | `500m` |
 | `resources.limits.memory` | `512Mi` |
@@ -191,6 +193,12 @@ Run `make config-contract` after changing settings, env vars, Helm values, or ch
 | `topologySpread.maxSkew` | `1` |
 | `topologySpread.topologyKey` | `kubernetes.io/hostname` |
 | `topologySpread.whenUnsatisfiable` | `ScheduleAnyway` |
+| `traceability.auditChainStore.backend` | `memory` |
+| `traceability.auditChainStore.key` | `inference-gateway:audit-chain-head` |
+| `traceability.auditChainStore.path` | `/var/lib/inference-gateway/audit-chain-head.json` |
+| `traceability.auditChainStore.persistIntervalSeconds` | `5` |
+| `traceability.auditChainStore.redisUrl` | `redis://budget-redis.budget.svc.cluster.local:6379/0` |
+| `traceability.auditChainStore.timeoutSeconds` | `0.5` |
 | `traceability.auditLogEnabled` | `true` |
 | `traceability.defaultSandboxId` | `local-lab` |
 <!-- chart-docs:end -->

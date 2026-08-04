@@ -7,7 +7,11 @@ independent retention.
 ## What the audit events are
 
 Every sandbox-bound gateway request emits one redacted audit event (`event: inference_request`;
-batch calls emit `event: batch_request`). These events are the **tamper-evident receipts**: each
+batch calls emit `event: batch_request`). Three more event types share the same chain: an
+`agent_action` receipt for what a workspace did beyond calling a model (denied egress, tool
+execution, file writes; see [ADR 0014](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/docs/adr/0014-agent-action-receipts.md)),
+a `rag_query` retrieval receipt from the RAG service on its own chain, and a `chain_start`
+record opening each chain. These events are the **tamper-evident receipts**: each
 is linked into a per-process SHA-256 hash chain (see
 [ADR 0006](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/docs/adr/0006-tamper-evident-audit-hash-chain.md)):
 
@@ -16,8 +20,10 @@ is linked into a per-process SHA-256 hash chain (see
   `json.dumps(record, sort_keys=True, separators=(",", ":"))` over the event **before** the
   `prev_hash`/`record_hash` fields are stamped on.
 
-Each event carries a `chain_id` (`HOSTNAME:process_start`, hash-covered) identifying its
-per-replica chain, and a chain-covered `ts`. Events are logged twice per request (once to the
+Each event carries a `chain_id` (`HOSTNAME:process_start:random`, hash-covered) identifying its
+per-replica chain, and a chain-covered `ts`. The random suffix is load-bearing: a pod that
+restarts twice within one second would otherwise mint the same id twice and the verifier would
+splice two unrelated chains together and report the seam as tampering. Events are logged twice per request (once to the
 audit logger `ai_platform_ops_lab.audit` and once to `uvicorn.error`), so a pod-log stream (and
 Loki) carries two byte-identical copies of every record. The verifier deduplicates them.
 
@@ -98,6 +104,47 @@ header on **every** path: the Promtail push (`clients[].tenant_id`), the Grafana
 any anchor/export query. Otherwise pushes and reads will 401. The bundled reference keeps
 `auth_enabled: false` (single-tenant); see the comment in
 [`deploy/observability/applications.yaml`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/deploy/observability/applications.yaml).
+
+## Chain continuity across restarts
+
+A chain covers one process lifetime. On its own that left a seam: a restarting pod began a
+fresh chain at genesis with nothing tying it to the one before, so an attacker who deleted a
+whole replica's chain produced something indistinguishable from an ordinary restart.
+
+Each process now opens its chain with a `chain_start` receipt naming the previous chain and
+the head it had reached, which makes the chains into a chain of their own. That record is
+hash-linked like any other, so the claim it makes about its predecessor is covered by the
+chain it opens.
+
+It only works if the head outlives the pod, so pick a store:
+
+    # File on a mounted volume
+    AUDIT_CHAIN_STORE_BACKEND=file
+    AUDIT_CHAIN_STORE_PATH=/var/lib/inference-gateway/audit-chain-head.json
+
+    # Or Redis, if the deployment already runs one
+    AUDIT_CHAIN_STORE_BACKEND=redis
+    AUDIT_CHAIN_STORE_KEY=inference-gateway:audit-chain-head
+
+The default is `memory`, which keeps the pre-continuity behavior: chains still verify
+individually, and each `chain_start` honestly reports no predecessor rather than claiming one
+it cannot support. The RAG service has the same settings under `RAG_AUDIT_CHAIN_STORE_*`.
+
+The head is written on an interval (`AUDIT_CHAIN_PERSIST_INTERVAL_SECONDS`, default 5) and on
+graceful shutdown, not on every record, so a head-store write never sits on the request path.
+The cost is that a hard crash can leave the persisted head a few records behind the true tail;
+the verifier accounts for this by checking the named head appears in the predecessor rather
+than requiring it to be the predecessor's last record.
+
+`audit-verify` reports continuity alongside the per-chain result:
+
+    python3 scripts/audit-verify.py exported-audit.log
+
+- A predecessor that is **present but disagrees** (truncated, or rewritten so its head
+  changed) is a failure.
+- A predecessor that is simply **absent** is a note, not a failure, because verifying a
+  window of rotated logs legitimately starts mid-history. Pass `--strict-continuity` when the
+  input is meant to be a complete history and a missing predecessor should fail.
 
 ## Offline auditor path
 

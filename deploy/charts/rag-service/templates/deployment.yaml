@@ -46,6 +46,18 @@ spec:
               value: {{ .Values.traceability.defaultSandboxId | quote }}
             - name: AUDIT_LOG_ENABLED
               value: {{ .Values.traceability.auditLogEnabled | quote }}
+            - name: RAG_AUDIT_CHAIN_STORE_BACKEND
+              value: {{ .Values.traceability.auditChainStore.backend | quote }}
+            - name: RAG_AUDIT_CHAIN_STORE_PATH
+              value: {{ .Values.traceability.auditChainStore.path | quote }}
+            - name: RAG_AUDIT_CHAIN_STORE_REDIS_URL
+              value: {{ .Values.traceability.auditChainStore.redisUrl | quote }}
+            - name: RAG_AUDIT_CHAIN_STORE_KEY
+              value: {{ .Values.traceability.auditChainStore.key | quote }}
+            - name: RAG_AUDIT_CHAIN_STORE_TIMEOUT_SECONDS
+              value: {{ .Values.traceability.auditChainStore.timeoutSeconds | quote }}
+            - name: RAG_AUDIT_CHAIN_PERSIST_INTERVAL_SECONDS
+              value: {{ .Values.traceability.auditChainStore.persistIntervalSeconds | quote }}
             - name: MAX_QUERY_CHARS
               value: {{ .Values.retrieval.maxQueryChars | quote }}
             - name: MAX_REQUEST_BODY_BYTES

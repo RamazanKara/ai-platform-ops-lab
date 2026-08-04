@@ -21,3 +21,28 @@ platform.ai/data-classification: {{ .Values.sandbox.dataClassification | quote }
 {{- define "agent-workspace.serviceAccountName" -}}
 {{- default "agent-runner" .Values.serviceAccount.name -}}
 {{- end -}}
+
+{{- /* The earliest expiresOn across the approved egress entries. One policy object holds
+       several exceptions, and the policy stops being fully reviewed the moment the first
+       of them lapses, so the soonest date is the one the cluster acts on. ISO dates sort
+       lexically, which is why a plain string comparison is correct here. */ -}}
+{{- define "agent-workspace.earliestEgressExpiry" -}}
+{{- $earliest := "" -}}
+{{- range .Values.networkPolicy.allowedEgressCidrs -}}
+{{- $expiry := required (printf "agent-workspace: allowedEgressCidrs entry %s must set expiresOn (YYYY-MM-DD)" .cidr) .expiresOn | toString -}}
+{{- if or (eq $earliest "") (lt $expiry $earliest) -}}
+{{- $earliest = $expiry -}}
+{{- end -}}
+{{- end -}}
+{{- $earliest -}}
+{{- end -}}
+
+{{- /* The catalog entries this policy's exceptions cite, so an operator reading the
+       NetworkPolicy in the cluster can find the review that approved it. */ -}}
+{{- define "agent-workspace.egressCatalogRefs" -}}
+{{- $refs := list -}}
+{{- range .Values.networkPolicy.allowedEgressCidrs -}}
+{{- $refs = append $refs (.catalogRef | toString) -}}
+{{- end -}}
+{{- join "," $refs -}}
+{{- end -}}

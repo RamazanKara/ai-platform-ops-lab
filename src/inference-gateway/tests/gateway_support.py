@@ -2,6 +2,7 @@ import base64
 import hmac
 import json
 
+from app.budget import REDIS_SETTLE_SCRIPT
 from app.settings import Settings
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec, padding
@@ -76,10 +77,25 @@ class FakeRedisBudgetStore:
     def ping(self):
         return True
 
-    def eval(
+    def eval(self, script, numkeys, key, *args):
+        # The tracker runs two Lua scripts against this client; dispatch on which one so
+        # the fake keeps the same reserve/settle split as the real backend.
+        if script is REDIS_SETTLE_SCRIPT or "HSET" in script:
+            return self._eval_settle(key, *args)
+        return self._eval_reserve(key, *args)
+
+    def _eval_settle(self, key, reserved, actual):
+        if key not in self.data:
+            return [0, 0, 0, 0]
+        current = self.data[key]["estimated_tokens"]
+        refund = min(max(int(reserved) - int(actual), 0), max(current, 0))
+        overrun = max(int(actual) - int(reserved), 0)
+        settled = current - refund + overrun
+        self.data[key]["estimated_tokens"] = settled
+        return [1, refund, overrun, settled]
+
+    def _eval_reserve(
         self,
-        script,
-        numkeys,
         key,
         ttl,
         add_requests,

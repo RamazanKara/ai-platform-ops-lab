@@ -337,22 +337,6 @@ def test_messages_redacts_prompt_secret_in_redact_mode():
 # --- streaming is rejected with a clear error (non-streaming-first, like /v1/completions) ---
 
 
-def test_messages_rejects_streaming_with_clear_error():
-    app = create_app(_tool_settings(allowed_models=("default-model",), allow_streaming=True))
-    fake = FakeRuntimeClient(response=_chat_response())
-    app.state.runtime_client = fake
-    client = TestClient(app)
-
-    response = client.post(
-        "/v1/messages",
-        json={"messages": [{"role": "user", "content": "hi"}], "max_tokens": 64, "stream": True},
-    )
-
-    assert response.status_code == 400
-    assert response.json()["error"]["code"] == "streaming_not_supported"
-    assert fake.calls == 0
-
-
 def test_messages_rejects_unapproved_model():
     app = create_app(_tool_settings(allowed_models=("default-model",)))
     app.state.runtime_client = FakeRuntimeClient(response=_chat_response())

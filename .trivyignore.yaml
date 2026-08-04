@@ -1,0 +1,16 @@
+# Reviewed Trivy findings, scoped to the exact file and rule rather than disabled globally.
+# An entry here is an accepted finding with a reason, not a way to make the scan quiet:
+# anything without a justification that survives review does not belong in this file.
+
+misconfigurations:
+  - id: KSV-0109
+    paths:
+      - "platform/model-catalog/k8s/configmap.yaml"
+    statement: >-
+      False positive from a substring match. KSV-0109 flags ConfigMap keys that look like
+      secrets, and it matches "Token" inside estimatedCharsPerToken, the reviewed
+      characters-per-token divisor used to estimate a request's token cost for budgeting.
+      The value is a small integer (3 or 4), the catalog holds no credentials, and every
+      real secret in this kit is a Kubernetes Secret or an External Secrets reference. The
+      field is named for the domain term; renaming it to evade the heuristic would trade a
+      correct name for a quiet scanner.

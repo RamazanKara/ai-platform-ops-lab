@@ -10,7 +10,7 @@ TENANT_OUTPUT ?= .out/tenants
 TOOLCHAIN_PROFILE ?= validate
 RELEASE_GATE_MAX_EVIDENCE_AGE_HOURS ?= 24
 CUSTOMER_REPO_URL ?= https://github.com/RamazanKara/private-ai-platform-kit.git
-CUSTOMER_REVISION ?= v0.27.1
+CUSTOMER_REVISION ?= v0.28.0
 CUSTOMER_GPU_PROFILE ?= nvidia
 TOOLCHAIN_BIN_DIR ?= $(CURDIR)/.tools/bin
 PYTHONDONTWRITEBYTECODE ?= 1
@@ -19,7 +19,7 @@ PYTHON := src/inference-gateway/.venv/bin/python
 export PATH := $(TOOLCHAIN_BIN_DIR):$(PATH)
 export PYTHONDONTWRITEBYTECODE
 
-.PHONY: help clean clean-all python-env bootstrap quickstart status local-up local-down bootstrap-argocd sync smoke rag-smoke trace-smoke tenant-up tenant-smoke tenant-onboard tenant-onboard-regulated tenant-onboard-gpu tenant-offboard customer-overlay customer-overlay-check agent-smoke chaos-drill eval eval-local rag-eval rag-eval-check loadtest loadtest-local benchmark-local docs-install docs-serve docs-build restore-drill backup-drill evidence release-gate release-gate-strict release-report release-report-strict slo-check slo-report quota-check quota-report egress-check egress-report retention-check retention-report model-check model-report model-provenance-check model-provenance-report model-provenance-verify image-scan supply-chain-check repo-security-scan dependency-lock-check repo-hygiene chart-docs chart-docs-update api-contract api-contract-update config-contract config-contract-update toolchain-install toolchain-doctor toolchain-report policy-test production-check validate validate-full test-gateway test-rag fuzz lint format format-check typecheck quality coverage dashboard-check dashboard-update paths paths-check audit-verify audit-verify-demo audit-anchor
+.PHONY: help clean clean-all python-env bootstrap quickstart status local-up local-down bootstrap-argocd sync smoke rag-smoke trace-smoke tenant-up tenant-smoke tenant-onboard tenant-onboard-regulated tenant-onboard-gpu tenant-offboard customer-overlay customer-overlay-check agent-smoke chaos-drill eval eval-local rag-eval rag-eval-check loadtest loadtest-local benchmark-local docs-install docs-serve docs-build restore-drill backup-drill evidence release-gate release-gate-strict release-report release-report-strict slo-check slo-report quota-check quota-report egress-check egress-report retention-check retention-report model-check model-report model-provenance-check model-provenance-report model-provenance-verify image-scan supply-chain-check repo-security-scan dependency-lock-check repo-hygiene chart-docs chart-docs-update api-contract api-contract-update config-contract config-contract-update toolchain-install toolchain-doctor toolchain-report policy-test sdk-conformance production-check validate validate-full test-gateway test-rag fuzz lint format format-check typecheck quality coverage dashboard-check dashboard-update paths paths-check audit-verify audit-verify-demo audit-anchor
 
 help:
 	@printf '%s\n' \
@@ -60,6 +60,7 @@ help:
 		'  make api-contract          Check service OpenAPI contracts' \
 		'  make config-contract       Check service runtime config contracts' \
 		'  make loadtest-local        Run k6 against an ephemeral local gateway' \
+		'  make sdk-conformance       Drive the real openai/anthropic SDKs against the gateway' \
 		'  make clean                 Remove generated output and service test environments' \
 		'  make clean-all             Also remove downloaded tools and tooling environments' \
 		'' \
@@ -324,6 +325,9 @@ toolchain-report: python-env
 
 policy-test:
 	./scripts/policy-test.sh
+
+sdk-conformance:
+	src/inference-gateway/.venv/bin/python paper/conformance/sdk_conformance.py
 
 production-check:
 	./scripts/test-gateway.sh

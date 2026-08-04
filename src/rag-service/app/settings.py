@@ -12,6 +12,7 @@ VALID_RETRIEVAL_BACKENDS = {"lexical", "qdrant"}
 VALID_EMBEDDING_PROVIDERS = {"hash", "openai-compatible"}
 VALID_RERANKER_PROVIDERS = {"none", "openai-compatible"}
 DEFAULT_VECTOR_DIMENSIONS = 384
+AUDIT_CHAIN_STORE_BACKENDS = frozenset({"memory", "file", "redis"})
 
 
 def _bool_from_env(name: str, default: bool) -> bool:
@@ -101,6 +102,14 @@ class Settings:
     document_dir: Path
     default_sandbox_id: str = "local-lab"
     audit_log_enabled: bool = True
+    # Where the retrieval-receipt chain head is persisted so a restart continues the chain
+    # of chains rather than starting an unlinked one. Mirrors the gateway's settings.
+    audit_chain_store_backend: str = "memory"
+    audit_chain_store_path: str = "/var/lib/rag-service/audit-chain-head.json"
+    audit_chain_store_redis_url: str = "redis://budget-redis.budget.svc.cluster.local:6379/0"
+    audit_chain_store_key: str = "rag-service:audit-chain-head"
+    audit_chain_store_timeout_seconds: float = 0.5
+    audit_chain_persist_interval_seconds: float = 5.0
     max_query_chars: int = 2048
     max_request_body_bytes: int = 1048576
     default_top_k: int = 3
@@ -154,6 +163,14 @@ class Settings:
     def __post_init__(self) -> None:
         """Validate retrieval, vector store, embedding, and auth fields after init."""
         validate_sandbox_id(self.default_sandbox_id)
+        if self.audit_chain_store_backend not in AUDIT_CHAIN_STORE_BACKENDS:
+            raise ValueError("audit_chain_store_backend must be one of: memory, file, redis")
+        for name, value in (
+            ("audit_chain_store_timeout_seconds", self.audit_chain_store_timeout_seconds),
+            ("audit_chain_persist_interval_seconds", self.audit_chain_persist_interval_seconds),
+        ):
+            if value <= 0:
+                raise ValueError(f"{name} must be greater than zero")
         for name, value in (
             ("max_query_chars", self.max_query_chars),
             ("max_request_body_bytes", self.max_request_body_bytes),
@@ -222,6 +239,16 @@ class Settings:
             document_dir=Path(os.getenv("RAG_DOCUMENT_DIR", "/knowledge")),
             default_sandbox_id=validate_sandbox_id(os.getenv("DEFAULT_SANDBOX_ID", "local-lab")),
             audit_log_enabled=_bool_from_env("AUDIT_LOG_ENABLED", True),
+            audit_chain_store_backend=os.getenv("RAG_AUDIT_CHAIN_STORE_BACKEND", "memory").strip().lower(),
+            audit_chain_store_path=os.getenv(
+                "RAG_AUDIT_CHAIN_STORE_PATH", "/var/lib/rag-service/audit-chain-head.json"
+            ),
+            audit_chain_store_redis_url=os.getenv(
+                "RAG_AUDIT_CHAIN_STORE_REDIS_URL", "redis://budget-redis.budget.svc.cluster.local:6379/0"
+            ),
+            audit_chain_store_key=os.getenv("RAG_AUDIT_CHAIN_STORE_KEY", "rag-service:audit-chain-head"),
+            audit_chain_store_timeout_seconds=_float_from_env("RAG_AUDIT_CHAIN_STORE_TIMEOUT_SECONDS", 0.5),
+            audit_chain_persist_interval_seconds=_float_from_env("RAG_AUDIT_CHAIN_PERSIST_INTERVAL_SECONDS", 5.0),
             max_query_chars=_positive_int_from_env("MAX_QUERY_CHARS", 2048),
             max_request_body_bytes=_positive_int_from_env("MAX_REQUEST_BODY_BYTES", 1048576),
             default_top_k=_positive_int_from_env("DEFAULT_TOP_K", 3),

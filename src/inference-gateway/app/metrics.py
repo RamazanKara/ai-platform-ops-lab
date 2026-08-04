@@ -38,6 +38,26 @@ SANDBOX_BUDGET_LIMIT = Gauge(
     "Configured sandbox budget limit by budget type. Zero means unlimited.",
     ["sandbox", "budget_type"],
 )
+AGENT_RECEIPTS = Counter(
+    "inference_gateway_agent_receipts_total",
+    "Agent-action receipts chained by action type and decision; rejections by reason.",
+    ["action_type", "decision"],
+)
+AUDIT_CHAIN_PERSIST = Counter(
+    "inference_gateway_audit_chain_persist_total",
+    "Audit chain head writes to the durable head store, by outcome.",
+    ["outcome"],
+)
+BUDGET_SETTLEMENTS = Counter(
+    "inference_gateway_budget_settlements_total",
+    "Budget reservations reconciled against measured usage, by outcome.",
+    ["outcome"],
+)
+BUDGET_SETTLED_TOKENS = Counter(
+    "inference_gateway_budget_settled_tokens_total",
+    "Estimated tokens returned to (refunded) or added to (overrun) sandbox budgets by settlement.",
+    ["sandbox", "direction"],
+)
 AUTH_FAILURES = Counter(
     "inference_gateway_auth_failures_total",
     "Total gateway authentication failures by route and reason.",

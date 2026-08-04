@@ -3,7 +3,7 @@ replicaCount: 1
 image:
   repository: ghcr.io/ramazankara/private-ai-platform-kit/rag-service
   # First-party image: release CI pins the published digest (set image.digest) after build.
-  tag: "v0.27.1"
+  tag: "v0.28.0"
   pullPolicy: IfNotPresent
 
 service:
@@ -17,6 +17,18 @@ serviceAccount:
 traceability:
   auditLogEnabled: true
   defaultSandboxId: local-lab
+  auditChainStore:
+    # Persisting the chain head lets a restarted pod open its chain with a record naming
+    # the previous chain and its head, so a deleted lifetime stops looking like a restart.
+    # "memory" keeps the pre-continuity behavior and is the default, because durable
+    # storage for it is the operator's to provide.
+    backend: memory
+    path: /var/lib/rag-service/audit-chain-head.json
+    redisUrl: redis://budget-redis.budget.svc.cluster.local:6379/0
+    key: rag-service:audit-chain-head
+    timeoutSeconds: "0.5"
+    # Coalesced, so a head-store write never sits on the request path.
+    persistIntervalSeconds: "5"
 
 auth:
   enabled: false

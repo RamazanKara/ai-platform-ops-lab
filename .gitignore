@@ -8,6 +8,10 @@ __pycache__/
 .venv/
 **/.venv/
 .venv-quality/
+# Throwaway venv holding the vendor client SDKs for paper/conformance/sdk_conformance.py.
+# They are test-time clients of the gateway, not dependencies of it, so they stay out of
+# the service locks and out of the repository.
+.venv-sdk-conformance/
 .tools/
 dist/
 build/
@@ -23,6 +27,10 @@ results/**/*.html
 results/**/*.sarif
 results/**/*.txt
 results/**/*.log
+# Run logs sitting directly in any results/ directory (paper/conformance/results/*.log).
+# The patterns above are anchored to the repo root and need an intermediate directory, so
+# they never matched a log written straight into a nested results/.
+**/results/*.log
 !results/**/sample-*
 
 # Generated paper figures

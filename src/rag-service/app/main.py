@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import hmac
 import json
 import logging
+import os
 import re
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from time import perf_counter
+from time import perf_counter, time
 from typing import Any
 from uuid import uuid4
 
@@ -18,6 +20,14 @@ from fastapi.responses import JSONResponse
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 from pydantic import BaseModel, Field
 
+from app.audit import (
+    AUDIT_GENESIS,
+    ChainHead,
+    advance_chain,
+    build_chain_store,
+    chain_audit_event,
+    chain_start_event,
+)
 from app.body_limit import RequestBodyLimitMiddleware
 from app.embeddings import build_embedding_provider
 from app.jwt_auth import JwksUnavailableError, JwtAuthError, JwtVerifier
@@ -28,7 +38,7 @@ from app.tracing import configure_tracing, trace_request
 
 AUDIT_LOGGER = logging.getLogger("ai_platform_ops_lab.rag.audit")
 TRACEPARENT_PATTERN = re.compile(r"^[\da-f]{2}-[\da-f]{32}-[\da-f]{16}-[\da-f]{2}$")
-SERVICE_VERSION = "0.27.1"
+SERVICE_VERSION = "0.28.0"
 OPENAPI_DESCRIPTION = (
     "Private retrieval service for platform and customer knowledge. The service "
     "returns traceable retrieval results, optional context blocks, and "
@@ -302,6 +312,56 @@ async def _apply_jwt_identity(request: Request, settings: Settings, verifier: Jw
     return None
 
 
+def _emit_audit_record(event: dict[str, Any]) -> None:
+    """Write one already-chained receipt to the audit logger and the operator log."""
+    line = json.dumps(event, sort_keys=True)
+    AUDIT_LOGGER.info(line)
+    logging.getLogger("uvicorn.error").info(line)
+
+
+def _persist_audit_head(app: FastAPI) -> None:
+    """Write the current chain head to the durable store, best effort.
+
+    A head that cannot be persisted costs continuity for the next process, not this one,
+    so a failure is logged rather than raised: retrieval must not stop because a head
+    store is unreachable.
+    """
+    state = app.state
+    if state.audit_chain_count == getattr(state, "audit_head_persisted_count", None):
+        return
+    try:
+        state.chain_store.save(
+            ChainHead(
+                chain_id=state.audit_chain_id,
+                head=state.audit_prev_hash,
+                count=state.audit_chain_count,
+            )
+        )
+    except Exception:
+        logging.getLogger("uvicorn.error").exception("audit chain head could not be persisted")
+        return
+    state.audit_head_persisted_count = state.audit_chain_count
+
+
+def open_audit_chain(app: FastAPI) -> dict[str, Any]:
+    """Open this process's chain with a ``chain_start`` receipt naming its predecessor."""
+    state = app.state
+    try:
+        previous = state.chain_store.load()
+    except Exception:
+        logging.getLogger("uvicorn.error").exception("audit chain head could not be read")
+        previous = None
+    event = chain_start_event(state.audit_chain_id, previous)
+    event["ts"] = time()
+    event["prev_hash"], event["record_hash"] = advance_chain(AUDIT_GENESIS, event)
+    state.audit_prev_hash = event["record_hash"]
+    state.audit_chain_count = 1
+    if state.settings.audit_log_enabled:
+        _emit_audit_record(event)
+    _persist_audit_head(app)
+    return event
+
+
 def _write_audit_log(
     settings: Settings,
     request: Request,
@@ -312,11 +372,22 @@ def _write_audit_log(
     result_ids: list[str] | None = None,
     error: str | None = None,
 ) -> None:
-    """Emit a redacted JSON audit event for the request when auditing is enabled."""
+    """Emit a redacted, hash-chained retrieval receipt when auditing is enabled.
+
+    Retrieval is the event that decides what tenant data an agent was shown, and it is the
+    main way untrusted content reaches a model through this platform. A plain log line
+    records that; a chained receipt lets an auditor prove the record was not edited or
+    dropped afterwards. The chain uses the same primitives and the same verifier as the
+    gateway's model-call receipts, and ``request_id``/``traceparent`` are carried on both,
+    so a retrieval can be tied to the completion it fed across two independent chains.
+    """
     if not settings.audit_log_enabled:
         return
     event: dict[str, Any] = {
         "event": "rag_query",
+        "chain_id": getattr(request.app.state, "audit_chain_id", None),
+        "action_type": "retrieval",
+        "decision": "allowed" if status_code < 400 else "denied",
         "route": route,
         "request_id": request.state.request_id,
         "traceparent": request.state.traceparent,
@@ -324,14 +395,16 @@ def _write_audit_log(
         "status_code": status_code,
         "latency_ms": round(latency_seconds * 1000, 2),
         "result_ids": result_ids or [],
+        # Chain-covered wall-clock timestamp: rewriting when a retrieval happened is then
+        # as detectable as rewriting that it happened.
+        "ts": time(),
         "error": error,
     }
     if query is not None:
         event["query_chars"] = len(query)
         event["query_sha256"] = _hash_query(query)
-    line = json.dumps(event, sort_keys=True)
-    AUDIT_LOGGER.info(line)
-    logging.getLogger("uvicorn.error").info(line)
+    chain_audit_event(request, event)
+    _emit_audit_record(event)
 
 
 @asynccontextmanager
@@ -346,6 +419,16 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     shared ``httpx.AsyncClient`` (mirroring the gateway's runtime-client shutdown)
     so pooled connections are not leaked.
     """
+    open_audit_chain(app)
+
+    async def _persist_loop() -> None:
+        # Coalesced rather than per-record, so a head store write never sits on the
+        # retrieval path. See the gateway's equivalent for the tradeoff this makes.
+        while True:
+            await asyncio.sleep(app.state.settings.audit_chain_persist_interval_seconds)
+            await asyncio.to_thread(_persist_audit_head, app)
+
+    persist_task = asyncio.ensure_future(_persist_loop())
     bootstrap = getattr(app.state.retriever, "bootstrap", None)
     if callable(bootstrap):
         try:
@@ -355,6 +438,8 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
                 "vector store bootstrap failed at startup; readiness will report not_ready until it recovers"
             )
     yield
+    persist_task.cancel()
+    await asyncio.to_thread(_persist_audit_head, app)
     retriever = app.state.retriever
     for dependency in (
         retriever,
@@ -380,6 +465,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.add_middleware(RequestBodyLimitMiddleware, max_bytes=resolved.max_request_body_bytes)
     app.state.settings = resolved
+    app.state.audit_prev_hash = AUDIT_GENESIS
+    app.state.audit_chain_count = 0
+    # Per-process chain identity, matching the gateway's format. The random suffix keeps
+    # two restarts inside the same second from minting the same id and having the verifier
+    # splice two unrelated chains together.
+    app.state.audit_chain_id = f"{os.getenv('HOSTNAME', 'rag-service')}:{int(time())}:{uuid4().hex[:8]}"
+    app.state.chain_store = build_chain_store(resolved)
     if resolved.retrieval_backend == "qdrant":
         embedding_provider = build_embedding_provider(
             resolved.embedding_provider,

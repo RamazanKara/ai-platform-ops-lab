@@ -16,6 +16,30 @@
     {
       "aliases": [],
       "allowed_values": [],
+      "app_default": false,
+      "chart_default": false,
+      "chart_value": "receipts.enabled",
+      "description": "Whether the agent-action receipt intake (POST /v1/receipts) is served.",
+      "field": "agent_receipts_enabled",
+      "name": "AGENT_RECEIPTS_ENABLED",
+      "sensitive": false,
+      "type": "boolean"
+    },
+    {
+      "aliases": [],
+      "allowed_values": [],
+      "app_default": 256,
+      "chart_default": 256,
+      "chart_value": "receipts.maxFieldChars",
+      "description": "Maximum length of a free-text field on an agent-action receipt.",
+      "field": "agent_receipt_max_field_chars",
+      "name": "AGENT_RECEIPT_MAX_FIELD_CHARS",
+      "sensitive": false,
+      "type": "integer"
+    },
+    {
+      "aliases": [],
+      "allowed_values": [],
       "app_default": [
         "qwen3.5:0.8b"
       ],
@@ -88,6 +112,82 @@
       "name": "API_KEY_SHA256S",
       "sensitive": true,
       "type": "csv"
+    },
+    {
+      "aliases": [],
+      "allowed_values": [],
+      "app_default": 5.0,
+      "chart_default": "5",
+      "chart_value": "traceability.auditChainStore.persistIntervalSeconds",
+      "description": "How often the chain head is written out, keeping the write off the request path.",
+      "field": "audit_chain_persist_interval_seconds",
+      "name": "AUDIT_CHAIN_PERSIST_INTERVAL_SECONDS",
+      "sensitive": false,
+      "type": "float"
+    },
+    {
+      "aliases": [],
+      "allowed_values": [
+        "memory",
+        "file",
+        "redis"
+      ],
+      "app_default": "memory",
+      "chart_default": "memory",
+      "chart_value": "traceability.auditChainStore.backend",
+      "description": "Where the audit chain head is persisted so a restart continues the chain of chains.",
+      "field": "audit_chain_store_backend",
+      "name": "AUDIT_CHAIN_STORE_BACKEND",
+      "sensitive": false,
+      "type": "string"
+    },
+    {
+      "aliases": [],
+      "allowed_values": [],
+      "app_default": "inference-gateway:audit-chain-head",
+      "chart_default": "inference-gateway:audit-chain-head",
+      "chart_value": "traceability.auditChainStore.key",
+      "description": "Redis key holding the audit chain head.",
+      "field": "audit_chain_store_key",
+      "name": "AUDIT_CHAIN_STORE_KEY",
+      "sensitive": false,
+      "type": "string"
+    },
+    {
+      "aliases": [],
+      "allowed_values": [],
+      "app_default": "/var/lib/inference-gateway/audit-chain-head.json",
+      "chart_default": "/var/lib/inference-gateway/audit-chain-head.json",
+      "chart_value": "traceability.auditChainStore.path",
+      "description": "Head file path for the file chain-store backend.",
+      "field": "audit_chain_store_path",
+      "name": "AUDIT_CHAIN_STORE_PATH",
+      "sensitive": false,
+      "type": "string"
+    },
+    {
+      "aliases": [],
+      "allowed_values": [],
+      "app_default": "redis://budget-redis.budget.svc.cluster.local:6379/0",
+      "chart_default": "redis://budget-redis.budget.svc.cluster.local:6379/0",
+      "chart_value": "traceability.auditChainStore.redisUrl",
+      "description": "Redis URL for the redis chain-store backend.",
+      "field": "audit_chain_store_redis_url",
+      "name": "AUDIT_CHAIN_STORE_REDIS_URL",
+      "sensitive": false,
+      "type": "url"
+    },
+    {
+      "aliases": [],
+      "allowed_values": [],
+      "app_default": 0.5,
+      "chart_default": "0.5",
+      "chart_value": "traceability.auditChainStore.timeoutSeconds",
+      "description": "Chain-store operation timeout in seconds.",
+      "field": "audit_chain_store_timeout_seconds",
+      "name": "AUDIT_CHAIN_STORE_TIMEOUT_SECONDS",
+      "sensitive": false,
+      "type": "float"
     },
     {
       "aliases": [],

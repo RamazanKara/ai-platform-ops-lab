@@ -10,11 +10,16 @@ and the resulting OpenAI chat completion is translated back into an Anthropic ``
 Text is the must-have and is exact; ``tool_use``/``tool_result`` blocks and Anthropic tool
 definitions are mapped to their closest OpenAI equivalents on a best-effort basis (see the
 per-function docstrings for the fidelity caveats).
+
+Streaming works the same way: :class:`AnthropicStreamTranslator` turns the runtime's flat
+OpenAI chunk stream into Anthropic's block-structured event sequence, so a streaming
+``/v1/messages`` call runs the same governed chat stream as ``/v1/chat/completions``.
 """
 
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
 from typing import Any
 from uuid import uuid4
 
@@ -352,3 +357,310 @@ def chat_completion_to_anthropic(response: dict[str, Any], *, request_model: str
             "output_tokens": int(completion_tokens) if isinstance(completion_tokens, (int, float)) else 0,
         },
     }
+
+
+def _sse_event(event_type: str, data: dict[str, Any]) -> bytes:
+    """Serialize one Anthropic SSE event: a named ``event:`` line and its ``data:`` line."""
+    body = json.dumps(data, separators=(",", ":"))
+    return f"event: {event_type}\ndata: {body}\n\n".encode()
+
+
+def anthropic_stream_error_event(message: str, *, request_id: str, sandbox_id: str) -> bytes:
+    """Build the terminal Anthropic ``error`` event for an upstream failure mid-stream.
+
+    The OpenAI-shaped equivalent (``streaming._terminal_stream_error_event``) is not usable
+    here: an Anthropic client parses named events and would treat a bare OpenAI error object
+    as an unknown event rather than a failed message.
+    """
+    return _sse_event(
+        "error",
+        {
+            "type": "error",
+            "error": {
+                "type": "api_error",
+                "message": message,
+                "request_id": request_id,
+                "sandbox_id": sandbox_id,
+            },
+        },
+    )
+
+
+def iter_sse_data_objects(segment: bytes) -> Iterator[dict[str, Any]]:
+    """Yield each decoded ``data:`` JSON object from a complete run of SSE text.
+
+    ``[DONE]``, blank lines, and undecodable payloads are skipped: the Anthropic stream is
+    rebuilt from the decoded chunks, so anything that is not a chat-completion chunk has no
+    translation and is dropped rather than forwarded in the wrong protocol.
+    """
+    for line in segment.split(b"\n"):
+        stripped = line.strip()
+        if not stripped.startswith(b"data:"):
+            continue
+        data = stripped[5:].strip()
+        if not data or data == b"[DONE]":
+            continue
+        try:
+            parsed = json.loads(data)
+        except (ValueError, UnicodeDecodeError):
+            continue
+        if isinstance(parsed, dict):
+            yield parsed
+
+
+def _delta_text(content: Any) -> str:
+    """Flatten a streamed OpenAI ``delta.content`` (string or content parts) into text."""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts: list[str] = []
+        for part in content:
+            if isinstance(part, dict) and part.get("type") == "text" and isinstance(part.get("text"), str):
+                parts.append(part["text"])
+            elif isinstance(part, str):
+                parts.append(part)
+        return "".join(parts)
+    return ""
+
+
+def _int_or_none(value: Any) -> int | None:
+    """Coerce a runtime-reported token count to int, rejecting bools and non-numbers."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return int(value)
+
+
+class AnthropicStreamTranslator:
+    """Translate an OpenAI chat-completion chunk stream into Anthropic Messages events.
+
+    Anthropic streams are block-structured: ``message_start``, then one
+    ``content_block_start`` / ``content_block_delta``* / ``content_block_stop`` run per
+    content block, then ``message_delta`` carrying the stop reason and usage, then
+    ``message_stop``. An OpenAI stream is a flat sequence of choice deltas with no block
+    framing, so this class holds the block state needed to bridge the two.
+
+    Two governance properties are structural here rather than incidental:
+
+    - Reasoning and thinking deltas cannot leak, because the translator only ever reads
+      ``delta.content`` and ``delta.tool_calls``. Anything else the runtime streams has no
+      path into the Anthropic events, which is a stronger guarantee than the chat path's
+      field-by-field strip.
+    - :attr:`scanned_text` accumulates the assistant text in decoded form, so the
+      end-of-stream output-guardrail scan inspects the real text rather than its JSON
+      escaping inside SSE frames.
+
+    Token counts are only reported by OpenAI-compatible runtimes on the terminal usage
+    event, which arrives after ``message_start`` must already have been sent. ``message_start``
+    therefore carries zeros and the true counts ride on the terminal ``message_delta``, where
+    Anthropic clients already expect the final usage to be reconciled.
+    """
+
+    # Ceiling on the retained assistant text, matching the chat stream's scan bound so a
+    # long generation cannot grow gateway memory in proportion to its own output.
+    SCAN_LIMIT = 262144
+
+    def __init__(self, *, request_model: str | None = None) -> None:
+        self._request_model = request_model
+        self._scanned_chars = 0
+        self._message_id: str | None = None
+        self._model: str | None = None
+        self._started = False
+        self._stopped = False
+        self._next_index = 0
+        self._open_kind: str | None = None
+        self._open_call_index: int | None = None
+        self._open_index: int | None = None
+        self._tool_block_index: dict[int, int] = {}
+        self._finish_reason: str | None = None
+        self._usage: dict[str, Any] | None = None
+        self._text_parts: list[str] = []
+
+    @property
+    def usage(self) -> dict[str, Any] | None:
+        """The last OpenAI ``usage`` object seen on the stream, or None if never reported."""
+        return self._usage
+
+    @property
+    def scanned_text(self) -> str:
+        """The decoded assistant text streamed so far, for the output-guardrail scan."""
+        return "".join(self._text_parts)
+
+    def feed(self, chunk: dict[str, Any]) -> bytes:
+        """Translate one decoded OpenAI chunk into zero or more Anthropic SSE events."""
+        if self._stopped:
+            return b""
+        events: list[bytes] = []
+        usage = chunk.get("usage")
+        if isinstance(usage, dict):
+            self._usage = usage
+        if not self._started:
+            events.append(self._message_start(chunk))
+        choices = chunk.get("choices")
+        if isinstance(choices, list) and choices and isinstance(choices[0], dict):
+            events.extend(self._feed_choice(choices[0]))
+        return b"".join(events)
+
+    def finish(self) -> bytes:
+        """Close any open block and emit the terminal ``message_delta``/``message_stop``.
+
+        Idempotent, so the stream body can call it from a ``finally`` without tracking
+        whether the error path already closed the message.
+        """
+        if self._stopped:
+            return b""
+        events: list[bytes] = []
+        if not self._started:
+            # An empty stream still owes the client a well-formed message.
+            events.append(self._message_start({}))
+        self._stopped = True
+        events.extend(self._close_open_block())
+        usage: dict[str, Any] = {}
+        input_tokens = _int_or_none((self._usage or {}).get("prompt_tokens"))
+        output_tokens = _int_or_none((self._usage or {}).get("completion_tokens"))
+        if input_tokens is not None:
+            usage["input_tokens"] = input_tokens
+        usage["output_tokens"] = output_tokens if output_tokens is not None else 0
+        events.append(
+            _sse_event(
+                "message_delta",
+                {
+                    "type": "message_delta",
+                    "delta": {
+                        "stop_reason": _STOP_REASON_BY_FINISH_REASON.get(self._finish_reason or "", "end_turn"),
+                        "stop_sequence": None,
+                    },
+                    "usage": usage,
+                },
+            )
+        )
+        events.append(_sse_event("message_stop", {"type": "message_stop"}))
+        return b"".join(events)
+
+    def _message_start(self, chunk: dict[str, Any]) -> bytes:
+        self._started = True
+        self._message_id = str(chunk.get("id") or f"msg_{uuid4().hex[:24]}")
+        self._model = str(chunk.get("model") or self._request_model or "")
+        return _sse_event(
+            "message_start",
+            {
+                "type": "message_start",
+                "message": {
+                    "id": self._message_id,
+                    "type": "message",
+                    "role": "assistant",
+                    "model": self._model,
+                    "content": [],
+                    "stop_reason": None,
+                    "stop_sequence": None,
+                    "usage": {"input_tokens": 0, "output_tokens": 0},
+                },
+            },
+        )
+
+    def _feed_choice(self, choice: dict[str, Any]) -> list[bytes]:
+        events: list[bytes] = []
+        finish_reason = choice.get("finish_reason")
+        if isinstance(finish_reason, str) and finish_reason:
+            self._finish_reason = finish_reason
+        delta = choice.get("delta")
+        if not isinstance(delta, dict):
+            return events
+        text = _delta_text(delta.get("content"))
+        if text:
+            events.extend(self._open_text_block())
+            if self._scanned_chars < self.SCAN_LIMIT:
+                self._text_parts.append(text)
+                self._scanned_chars += len(text)
+            events.append(
+                _sse_event(
+                    "content_block_delta",
+                    {
+                        "type": "content_block_delta",
+                        "index": self._open_index,
+                        "delta": {"type": "text_delta", "text": text},
+                    },
+                )
+            )
+        tool_calls = delta.get("tool_calls")
+        if isinstance(tool_calls, list):
+            for tool_call in tool_calls:
+                if isinstance(tool_call, dict):
+                    events.extend(self._feed_tool_call(tool_call))
+        return events
+
+    def _feed_tool_call(self, tool_call: dict[str, Any]) -> list[bytes]:
+        call_index = tool_call.get("index")
+        if isinstance(call_index, bool) or not isinstance(call_index, int):
+            call_index = 0
+        function = tool_call.get("function")
+        function = function if isinstance(function, dict) else {}
+        events: list[bytes] = []
+        if call_index not in self._tool_block_index:
+            events.extend(self._close_open_block())
+            index = self._next_index
+            self._next_index += 1
+            self._tool_block_index[call_index] = index
+            self._open_kind = "tool_use"
+            self._open_call_index = call_index
+            self._open_index = index
+            events.append(
+                _sse_event(
+                    "content_block_start",
+                    {
+                        "type": "content_block_start",
+                        "index": index,
+                        "content_block": {
+                            "type": "tool_use",
+                            "id": str(tool_call.get("id") or f"toolu_{uuid4().hex[:24]}"),
+                            "name": str(function.get("name") or ""),
+                            "input": {},
+                        },
+                    },
+                )
+            )
+        arguments = function.get("arguments")
+        if isinstance(arguments, str) and arguments:
+            # Argument deltas are addressed by the block index recorded when the call was
+            # first seen. Runtimes stream tool calls one at a time, so in practice that is
+            # the open block; addressing by index keeps a resumed call correct anyway.
+            events.append(
+                _sse_event(
+                    "content_block_delta",
+                    {
+                        "type": "content_block_delta",
+                        "index": self._tool_block_index[call_index],
+                        "delta": {"type": "input_json_delta", "partial_json": arguments},
+                    },
+                )
+            )
+        return events
+
+    def _open_text_block(self) -> list[bytes]:
+        if self._open_kind == "text":
+            return []
+        events = self._close_open_block()
+        index = self._next_index
+        self._next_index += 1
+        self._open_kind = "text"
+        self._open_call_index = None
+        self._open_index = index
+        events.append(
+            _sse_event(
+                "content_block_start",
+                {
+                    "type": "content_block_start",
+                    "index": index,
+                    "content_block": {"type": "text", "text": ""},
+                },
+            )
+        )
+        return events
+
+    def _close_open_block(self) -> list[bytes]:
+        if self._open_kind is None:
+            return []
+        index = self._open_index
+        self._open_kind = None
+        self._open_call_index = None
+        self._open_index = None
+        return [_sse_event("content_block_stop", {"type": "content_block_stop", "index": index})]

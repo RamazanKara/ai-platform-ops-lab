@@ -405,6 +405,49 @@ spec:
                   - "10.0.0.0/8"
                   - "172.16.0.0/12"
                   - "192.168.0.0/16"
+    - name: require-egress-expiry-annotation
+      match:
+        any:
+          - resources:
+              kinds:
+                - NetworkPolicy
+              selector:
+                matchLabels:
+                  platform.ai/egress-governed: "true"
+      validate:
+        message: >-
+          A governed egress exception must carry platform.ai/egress-expires-on
+          (YYYY-MM-DD) matching its entry in platform/network/egress-catalog.yaml. An
+          exception with no expiry is a permanent one.
+        pattern:
+          metadata:
+            annotations:
+              platform.ai/egress-expires-on: "????-??-??"
+    - name: deny-expired-egress-exception
+      match:
+        any:
+          - resources:
+              kinds:
+                - NetworkPolicy
+              selector:
+                matchLabels:
+                  platform.ai/egress-governed: "true"
+      validate:
+        message: >-
+          This egress exception's catalog entry has expired. Renew it in
+          platform/network/egress-catalog.yaml and update expiresOn, or remove the
+          exception. Background scanning re-evaluates this rule, so an exception that
+          lapses while applied is reported without waiting for the next admission.
+        deny:
+          conditions:
+            all:
+              # The expiry is a date, so it is compared at end of day: an exception is
+              # valid through its expiresOn and lapses the moment that day is over.
+              - key: >-
+                  {{ time_before(join('', [request.object.metadata.annotations."platform.ai/egress-expires-on"
+                  || '9999-12-31', 'T23:59:59Z']), time_now_utc()) }}
+                operator: Equals
+                value: true
 ---
 apiVersion: kyverno.io/v1
 kind: ClusterPolicy

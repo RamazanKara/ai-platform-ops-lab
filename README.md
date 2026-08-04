@@ -11,7 +11,7 @@ and validation code kept in the same repository.
 
 Private AI Platform Kit is a reference implementation for running an LLM gateway, retrieval, and coding-agent workspaces on Kubernetes. It includes a local `kind` profile and a template for customer-owned clusters built from the same service code and Helm charts.
 
-Current release: `v0.27.1`. The project is suitable for evaluation and platform engineering work. It is not a managed service or a ready-made production environment. A production deployment still needs customer identity, secrets, storage, ingress, observability, backup, capacity planning, and current validation evidence.
+Current release: `v0.28.0`. The project is suitable for evaluation and platform engineering work. It is not a managed service or a ready-made production environment. A production deployment still needs customer identity, secrets, storage, ingress, observability, backup, capacity planning, and current validation evidence.
 
 [Documentation](https://ramazankara.github.io/private-ai-platform-kit/) · [Quickstart](docs/quickstart.md) · [Feature inventory](docs/feature-inventory.md) · [Production readiness](docs/production-readiness.md) · [Security](docs/security-overview.md)
 
@@ -26,8 +26,9 @@ presentation, not release evidence.
 
 ## What is in the repository
 
-- A FastAPI inference gateway with OpenAI-compatible chat, completions, embeddings, moderations, Files, Batch, and Responses endpoints, plus a non-streaming Anthropic Messages endpoint. The exact route set is stored in [the OpenAPI contract](platform/api-contracts/inference-gateway.openapi.json).
-- API-key and JWT/JWKS authentication, model allowlists, request limits, per-sandbox budgets, rate limiting, input secret detection, an optional output guardrail, and redacted audit records linked by a hash chain.
+- A FastAPI inference gateway with OpenAI-compatible chat, completions, embeddings, moderations, Files, Batch, and Responses endpoints, plus an Anthropic Messages endpoint with streaming. The exact route set is stored in [the OpenAPI contract](platform/api-contracts/inference-gateway.openapi.json).
+- API-key and JWT/JWKS authentication, model allowlists, request limits, per-sandbox budgets settled against measured token usage, rate limiting, input secret detection, an optional output guardrail, and redacted audit records linked by a hash chain.
+- Receipts covering model calls, RAG retrievals, and (opt-in) agent actions such as denied egress and tool execution, on chains that link across process restarts so a missing lifetime is detectable.
 - Ollama values for the local CPU path and vLLM values for NVIDIA and AMD GPU clusters.
 - A RAG service with a local lexical backend and a Qdrant-backed customer profile.
 - Helm charts, Argo CD applications, Kyverno policies, tenant templates, and agent workspaces based on `kubernetes-sigs/agent-sandbox`.
@@ -87,7 +88,7 @@ The customer profile assumes that Kubernetes and Argo CD already exist. Configur
 ```bash
 make customer-overlay \
   CUSTOMER_REPO_URL=https://github.com/<customer>/<repo>.git \
-  CUSTOMER_REVISION=v0.27.1 \
+  CUSTOMER_REVISION=v0.28.0 \
   CUSTOMER_GPU_PROFILE=nvidia
 ```
 
@@ -101,7 +102,7 @@ The customer overlay does not install or configure ingress, an identity provider
 
 Clients call the inference gateway. The gateway authenticates the request, applies the configured model and admission policy, accounts for the sandbox budget, and forwards the request to Ollama or vLLM. It emits metrics and a redacted audit record. RAG is a separate service; clients or applications call it to retrieve context and then submit grounded messages to the gateway.
 
-The hash chain makes edits or reordering within an exported audit stream detectable. It does not make logs durable by itself. Detecting truncation or rollback requires a trusted, separately stored chain-head anchor. See [the audit runbook](runbooks/audit-chain.md).
+The hash chain makes edits or reordering within an exported audit stream detectable. Each process opens its chain with a record naming the previous chain and the head it reached, so the chains form their own chain and a whole lifetime that went missing no longer looks like an ordinary restart. It still does not make logs durable by itself: detecting truncation or rollback of the most recent records requires a trusted, separately stored chain-head anchor. See [the audit runbook](runbooks/audit-chain.md).
 
 ## Documentation
 

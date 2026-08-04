@@ -156,6 +156,22 @@ spec:
               value: {{ .Values.budget.keyPrefix | quote }}
             - name: AUDIT_LOG_ENABLED
               value: {{ .Values.traceability.auditLogEnabled | quote }}
+            - name: AUDIT_CHAIN_STORE_BACKEND
+              value: {{ .Values.traceability.auditChainStore.backend | quote }}
+            - name: AUDIT_CHAIN_STORE_PATH
+              value: {{ .Values.traceability.auditChainStore.path | quote }}
+            - name: AUDIT_CHAIN_STORE_REDIS_URL
+              value: {{ .Values.traceability.auditChainStore.redisUrl | quote }}
+            - name: AUDIT_CHAIN_STORE_KEY
+              value: {{ .Values.traceability.auditChainStore.key | quote }}
+            - name: AUDIT_CHAIN_STORE_TIMEOUT_SECONDS
+              value: {{ .Values.traceability.auditChainStore.timeoutSeconds | quote }}
+            - name: AUDIT_CHAIN_PERSIST_INTERVAL_SECONDS
+              value: {{ .Values.traceability.auditChainStore.persistIntervalSeconds | quote }}
+            - name: AGENT_RECEIPTS_ENABLED
+              value: {{ .Values.receipts.enabled | quote }}
+            - name: AGENT_RECEIPT_MAX_FIELD_CHARS
+              value: {{ .Values.receipts.maxFieldChars | quote }}
             - name: DEFAULT_SANDBOX_ID
               value: {{ .Values.traceability.defaultSandboxId | quote }}
             - name: API_KEY_AUTH_ENABLED

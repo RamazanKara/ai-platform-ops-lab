@@ -17,7 +17,34 @@ resources:
   - resources/unscoped-egress.yaml
   - resources/local-model-pull-egress.yaml
   - resources/customer-model-pull-exception.yaml
+  - resources/expired-egress-exception.yaml
+  - resources/current-egress-exception.yaml
+  - resources/undated-egress-exception.yaml
 results:
+  - policy: ai-platform-restrict-egress-cidrs
+    rule: deny-expired-egress-exception
+    resources:
+      - expired-egress-exception
+    kind: NetworkPolicy
+    result: fail
+  - policy: ai-platform-restrict-egress-cidrs
+    rule: deny-expired-egress-exception
+    resources:
+      - current-egress-exception
+    kind: NetworkPolicy
+    result: pass
+  - policy: ai-platform-restrict-egress-cidrs
+    rule: require-egress-expiry-annotation
+    resources:
+      - undated-egress-exception
+    kind: NetworkPolicy
+    result: fail
+  - policy: ai-platform-restrict-egress-cidrs
+    rule: require-egress-expiry-annotation
+    resources:
+      - current-egress-exception
+    kind: NetworkPolicy
+    result: pass
   - policy: ai-platform-required-labels
     rule: require-platform-labels
     resources:

@@ -16,6 +16,10 @@ Isolated namespace template for coding agents that use the Private AI Platform K
 | `networkPolicy.allowDns` | `true` |
 | `networkPolicy.allowedEgressCidrs` | `[]` |
 | `networkPolicy.enabled` | `true` |
+| `networkPolicy.expiryEnforcement.enabled` | `true` |
+| `networkPolicy.expiryEnforcement.image` | `docker.io/bitnami/kubectl:1.34.1` |
+| `networkPolicy.expiryEnforcement.removeExpired` | `false` |
+| `networkPolicy.expiryEnforcement.schedule` | `17 3 * * *` |
 | `networkPolicy.gateway.namespace` | `inference` |
 | `networkPolicy.gateway.port` | `8080` |
 | `networkPolicy.rag.namespace` | `rag` |

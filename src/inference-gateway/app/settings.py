@@ -67,6 +67,8 @@ from app.env_config import (
     parse_completion_window as parse_completion_window,
 )
 
+AUDIT_CHAIN_STORE_BACKENDS = frozenset({"memory", "file", "redis"})
+
 
 @dataclass(frozen=True)
 class Settings:
@@ -78,6 +80,19 @@ class Settings:
     model_id: str
     request_timeout_seconds: float
     audit_log_enabled: bool = True
+    # Where the audit chain head is persisted so a restart continues the chain of chains
+    # instead of starting an unlinked one. "memory" keeps the pre-continuity behavior and
+    # is the default, because durable storage is the operator's to provide.
+    audit_chain_store_backend: str = "memory"
+    audit_chain_store_path: str = "/var/lib/inference-gateway/audit-chain-head.json"
+    audit_chain_store_redis_url: str = "redis://budget-redis.budget.svc.cluster.local:6379/0"
+    audit_chain_store_key: str = "inference-gateway:audit-chain-head"
+    audit_chain_store_timeout_seconds: float = 0.5
+    audit_chain_persist_interval_seconds: float = 5.0
+    # Agent-action receipt intake (ADR 0014). Off by default: it is an additional write
+    # surface, and a deployment with no receipt producers gains nothing by exposing it.
+    agent_receipts_enabled: bool = False
+    agent_receipt_max_field_chars: int = 256
     default_sandbox_id: str = "local-lab"
     allowed_models: tuple[str, ...] = ()
     max_messages: int = 16
@@ -221,6 +236,12 @@ class Settings:
             raise ValueError("response_cache_redis_timeout_seconds must be greater than zero")
         if not self.response_cache_key_prefix.strip():
             raise ValueError("response_cache_key_prefix must not be empty")
+        if self.audit_chain_store_backend not in AUDIT_CHAIN_STORE_BACKENDS:
+            raise ValueError("audit_chain_store_backend must be one of: memory, file, redis")
+        if self.audit_chain_store_timeout_seconds <= 0:
+            raise ValueError("audit_chain_store_timeout_seconds must be greater than zero")
+        if self.audit_chain_persist_interval_seconds <= 0:
+            raise ValueError("audit_chain_persist_interval_seconds must be greater than zero")
         if self.output_guardrail_mode not in OUTPUT_GUARDRAIL_MODES:
             raise ValueError("output_guardrail_mode must be one of: flag, redact, block")
         unknown_output_patterns = sorted(set(self.output_guardrail_patterns) - set(BUILT_IN_SECRET_PATTERNS))
@@ -303,6 +324,18 @@ class Settings:
             model_id=model_id,
             request_timeout_seconds=_float_from_env("REQUEST_TIMEOUT_SECONDS", 120.0),
             audit_log_enabled=_bool_from_env("AUDIT_LOG_ENABLED", True),
+            audit_chain_store_backend=os.getenv("AUDIT_CHAIN_STORE_BACKEND", "memory").strip().lower(),
+            audit_chain_store_path=os.getenv(
+                "AUDIT_CHAIN_STORE_PATH", "/var/lib/inference-gateway/audit-chain-head.json"
+            ),
+            audit_chain_store_redis_url=os.getenv(
+                "AUDIT_CHAIN_STORE_REDIS_URL", "redis://budget-redis.budget.svc.cluster.local:6379/0"
+            ),
+            audit_chain_store_key=os.getenv("AUDIT_CHAIN_STORE_KEY", "inference-gateway:audit-chain-head"),
+            audit_chain_store_timeout_seconds=_float_from_env("AUDIT_CHAIN_STORE_TIMEOUT_SECONDS", 0.5),
+            audit_chain_persist_interval_seconds=_float_from_env("AUDIT_CHAIN_PERSIST_INTERVAL_SECONDS", 5.0),
+            agent_receipts_enabled=_bool_from_env("AGENT_RECEIPTS_ENABLED", False),
+            agent_receipt_max_field_chars=_positive_int_from_env("AGENT_RECEIPT_MAX_FIELD_CHARS", 256),
             default_sandbox_id=validate_sandbox_id(os.getenv("DEFAULT_SANDBOX_ID", "local-lab")),
             allowed_models=_csv_from_env("ALLOWED_MODELS", (model_id,)),
             max_messages=_int_from_env("MAX_MESSAGES", 16),

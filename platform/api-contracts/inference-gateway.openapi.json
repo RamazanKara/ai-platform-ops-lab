@@ -556,6 +556,92 @@
         "title": "ModerationRequest",
         "type": "object"
       },
+      "ReceiptRequest": {
+        "additionalProperties": false,
+        "description": "A single agent action reported by a workspace for the audit chain.\n\nEvery free-text field is bounded and redacted before it is chained. A receipt is\npermanent, tamper-evident, and read by auditors, which makes it the last place a\ncredential pasted into a command line should be allowed to come to rest. A producer\nthat needs to commit to detail it cannot publish sends ``detail_sha256`` instead.",
+        "properties": {
+          "action_type": {
+            "title": "Action Type",
+            "type": "string"
+          },
+          "correlation_request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correlation Request Id"
+          },
+          "decision": {
+            "title": "Decision",
+            "type": "string"
+          },
+          "detail_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail Sha256"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "sandbox_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sandbox Id"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target"
+          },
+          "tool": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool"
+          }
+        },
+        "required": [
+          "action_type",
+          "decision"
+        ],
+        "title": "ReceiptRequest",
+        "type": "object"
+      },
       "ResponsesRequest": {
         "additionalProperties": true,
         "description": "Request body for a native OpenAI ``POST /v1/responses`` call (stateless subset).\n\nMirrors the OpenAI Responses API shape. ``input`` is required and accepts either a plain\nstring (translated to a single user message) or an array of input items / messages.\n``instructions`` is prepended as a system message. ``max_output_tokens`` becomes the\nOpenAI ``max_tokens`` cap that admission enforces. ``extra=\"allow\"`` forwards any other\nResponses field so nothing is silently dropped.\n\nThe stateful fields ``store`` and ``previous_response_id`` are modelled explicitly so the\nhandler can reject them (this subset is stateless) instead of forwarding them into the\nchat payload where they would be meaningless.",
@@ -768,7 +854,7 @@
   "info": {
     "description": "OpenAI-compatible private inference gateway with sandbox traceability, admission controls, budget enforcement, redacted audit events, and runtime routing to Ollama or vLLM.",
     "title": "Private AI Platform Kit Inference Gateway",
-    "version": "0.27.1"
+    "version": "0.28.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -1471,7 +1557,7 @@
     },
     "/v1/messages": {
       "post": {
-        "description": "Native Anthropic Messages API endpoint. The request/response are translated to and from the internal OpenAI chat shape and routed through the SAME governance path as POST /v1/chat/completions: model allowlist, admission limits (including the max_tokens cap), prompt secret policy, sandbox budget, output guardrail, and audit. Anthropic requires max_tokens; a request omitting it is rejected. Streaming is not supported on this endpoint in this release; send stream=false or use POST /v1/chat/completions for OpenAI-shaped streaming.",
+        "description": "Native Anthropic Messages API endpoint. The request/response are translated to and from the internal OpenAI chat shape and routed through the SAME governance path as POST /v1/chat/completions: model allowlist, admission limits (including the max_tokens cap), prompt secret policy, sandbox budget, output guardrail, and audit. Anthropic requires max_tokens; a request omitting it is rejected. Streaming is supported: stream=true returns the Anthropic event sequence (message_start, content_block_start/delta/stop, message_delta, message_stop) translated from the same governed chat stream, subject to the gateway's streaming admission toggle.",
         "operationId": "createMessage",
         "requestBody": {
           "content": {
@@ -1600,6 +1686,58 @@
         "summary": "Classify content against the gateway policy",
         "tags": [
           "inference"
+        ]
+      }
+    },
+    "/v1/receipts": {
+      "post": {
+        "description": "Agent-action receipt intake (ADR 0014). Records what a workspace did beyond calling a model (denied egress, tool execution, file writes, credential requests) on the SAME tamper-evident hash chain as model calls, so 'make audit-verify' checks them together. The action_type vocabulary is closed; an unknown value is rejected. This endpoint RECORDS claims and enforces nothing: a receipt reporting a denial is evidence that some other control denied the action, never the control itself, and submitting one permits nothing. The sandbox on the receipt is the caller's bound sandbox, so a workspace can only add to its own history. Off by default (AGENT_RECEIPTS_ENABLED).",
+        "operationId": "createAgentReceipt",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReceiptRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Createagentreceipt",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Record an agent action on the audit chain",
+        "tags": [
+          "sandbox"
         ]
       }
     },

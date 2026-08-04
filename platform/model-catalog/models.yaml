@@ -19,6 +19,7 @@ spec:
       contextWindow: 262144
       maxPromptChars: 131072
       maxCompletionTokens: 8192
+      estimatedCharsPerToken: 3
       promotionRequest: platform/model-catalog/promotion-requests/qwen3-coder-customer-lab-approved.yaml
       modelCard: platform/model-catalog/model-cards/qwen3-coder.md
       notes: Current Qwen3 Coder Next profile for customer GPU coding-agent clusters.
@@ -36,6 +37,7 @@ spec:
       contextWindow: 32768
       maxPromptChars: 8192
       maxCompletionTokens: 1024
+      estimatedCharsPerToken: 4
       promotionRequest: platform/model-catalog/promotion-requests/qwen2.5-local-lab-approved.yaml
       modelCard: platform/model-catalog/model-cards/qwen2.5-0.5b.md
       notes: Default local CPU smoke model; fast non-reasoning Qwen2.5 0.5B sized for laptop kind demos.
@@ -53,6 +55,7 @@ spec:
       contextWindow: 32768
       maxPromptChars: 8192
       maxCompletionTokens: 1024
+      estimatedCharsPerToken: 4
       promotionRequest: platform/model-catalog/promotion-requests/qwen3.5-customer-lab-approved.yaml
       modelCard: platform/model-catalog/model-cards/qwen3.5-0.8b.md
       notes: Higher-quality small Qwen3.5 reasoning model for the customer Ollama profile; reasons slowly on CPU, so the local laptop profile uses qwen2.5:0.5b instead.
@@ -78,6 +81,7 @@ spec:
       contextWindow: 512
       maxPromptChars: 2048
       maxCompletionTokens: 1
+      estimatedCharsPerToken: 4
       promotionRequest: platform/model-catalog/promotion-requests/bge-small-embedding-approved.yaml
       modelCard: platform/model-catalog/model-cards/bge-small-en.md
       notes: Approved reference embedding model (384-dim) for governed RAG retrieval; replaces the demo hashed-vector default. maxCompletionTokens is nominal (embeddings produce vectors, not completions).
@@ -99,6 +103,7 @@ spec:
       contextWindow: 262144
       maxPromptChars: 131072
       maxCompletionTokens: 8192
+      estimatedCharsPerToken: 3
       notes: Proposed Qwen3.6 MoE (35B total / 3B active) general+coding alternative. Confirm context window before promotion.
     - id: zai-org/GLM-5.2
       runtime: vllm
@@ -114,6 +119,7 @@ spec:
       contextWindow: 200000
       maxPromptChars: 131072
       maxCompletionTokens: 8192
+      estimatedCharsPerToken: 3
       notes: Proposed GLM-5.2 MoE agentic-coding alternative (multi-GPU). Verify license and context window before promotion.
     - id: deepseek-ai/DeepSeek-V4-Flash
       runtime: vllm
@@ -129,4 +135,5 @@ spec:
       contextWindow: 1048576
       maxPromptChars: 131072
       maxCompletionTokens: 8192
+      estimatedCharsPerToken: 3
       notes: Proposed DeepSeek-V4-Flash MoE (284B total / 13B active, 1M context) alternative (multi-GPU). Verify license before promotion.

@@ -73,8 +73,41 @@ class BudgetReservation:
         }
 
 
+@dataclass(frozen=True)
+class BudgetSettlement:
+    """The correction applied to a sandbox budget once real token usage is known.
+
+    Admission has to charge before the model runs, so it charges the worst case the
+    request could cost (the full requested completion cap, times ``n``). Settlement is the
+    other half of that bargain: once the runtime reports what the call actually consumed,
+    the reserved estimate is swapped for the measured number. Without it an agent that
+    asks for 8k completion tokens and emits 200 is metered as if it had emitted 8k, so it
+    hits the window limit at a small fraction of its real spend and every usage or
+    chargeback figure derived from the counter is the reservation rather than the truth.
+    """
+
+    sandbox_id: str
+    reserved_estimated_tokens: int
+    actual_tokens: int
+    refunded_tokens: int
+    overrun_tokens: int
+    settled_estimated_tokens: int
+    backend: str
+
+    def audit_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable summary of this settlement for audit receipts."""
+        return {
+            "backend": self.backend,
+            "reserved_estimated_tokens": self.reserved_estimated_tokens,
+            "actual_tokens": self.actual_tokens,
+            "refunded_tokens": self.refunded_tokens,
+            "overrun_tokens": self.overrun_tokens,
+            "settled_estimated_tokens": self.settled_estimated_tokens,
+        }
+
+
 class SandboxBudgetTracker(Protocol):
-    """Protocol for sandbox budget trackers that snapshot and reserve usage."""
+    """Protocol for sandbox budget trackers that snapshot, reserve, and settle usage."""
 
     settings: Settings
 
@@ -86,6 +119,52 @@ class SandboxBudgetTracker(Protocol):
         payload: dict[str, Any],
         settings: Settings | None = None,
     ) -> BudgetReservation | None: ...
+
+    def settle(
+        self,
+        reservation: BudgetReservation,
+        usage: dict[str, Any] | None,
+    ) -> BudgetSettlement | None: ...
+
+
+def _token_count(value: Any) -> int | None:
+    """Coerce a runtime-reported token count to a non-negative int, else None."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    count = int(value)
+    return count if count >= 0 else None
+
+
+def actual_total_tokens(usage: dict[str, Any] | None) -> int | None:
+    """Return the runtime's total token count for a call, or None when unreported.
+
+    Prefers ``total_tokens`` and falls back to the prompt/completion pair, because
+    Ollama and vLLM do not agree on which of the three they always populate. None means
+    the runtime told us nothing, which is the one case where the reservation has to stand.
+    """
+    if not isinstance(usage, dict):
+        return None
+    total = _token_count(usage.get("total_tokens"))
+    if total is not None:
+        return total
+    prompt = _token_count(usage.get("prompt_tokens"))
+    completion = _token_count(usage.get("completion_tokens"))
+    if prompt is None and completion is None:
+        return None
+    return (prompt or 0) + (completion or 0)
+
+
+def settlement_adjustment(reserved: int, actual: int, current: int) -> tuple[int, int]:
+    """Return ``(refund, overrun)`` for a reservation being reconciled against reality.
+
+    The refund is bounded by what the counter currently holds, so a window that rolled
+    over between reserve and settle cannot be driven negative by a refund belonging to
+    the previous window. An overrun (the call consumed more than the worst case charged)
+    is added rather than discarded, so the correction runs in both directions.
+    """
+    refund = min(max(reserved - actual, 0), max(current, 0))
+    overrun = max(actual - reserved, 0)
+    return refund, overrun
 
 
 def budget_delta(settings: Settings, payload: dict[str, Any]) -> BudgetDelta:
@@ -202,6 +281,37 @@ class InMemorySandboxBudgetTracker:
             backend=self.backend,
         )
 
+    def settle(
+        self,
+        reservation: BudgetReservation,
+        usage: dict[str, Any] | None,
+    ) -> BudgetSettlement | None:
+        """Replace this request's reserved token estimate with its measured usage."""
+        actual = actual_total_tokens(usage)
+        if actual is None:
+            return None
+        with self._lock:
+            current = self._usage.get(reservation.sandbox_id)
+            if current is None:
+                # The window rolled over: there is no counter holding this reservation.
+                return None
+            refund, overrun = settlement_adjustment(reservation.estimated_tokens, actual, current.estimated_tokens)
+            settled = current.estimated_tokens - refund + overrun
+            self._usage[reservation.sandbox_id] = BudgetUsage(
+                requests=current.requests,
+                prompt_chars=current.prompt_chars,
+                estimated_tokens=settled,
+            )
+        return BudgetSettlement(
+            sandbox_id=reservation.sandbox_id,
+            reserved_estimated_tokens=reservation.estimated_tokens,
+            actual_tokens=actual,
+            refunded_tokens=refund,
+            overrun_tokens=overrun,
+            settled_estimated_tokens=settled,
+            backend=self.backend,
+        )
+
 
 REDIS_RESERVE_SCRIPT = """
 local key = KEYS[1]
@@ -242,6 +352,33 @@ if ttl > 0 and existing_ttl < 0 then
   redis.call('EXPIRE', key, ttl)
 end
 return {1, proposed_requests, proposed_prompt_chars, proposed_estimated_tokens}
+"""
+
+
+REDIS_SETTLE_SCRIPT = """
+local key = KEYS[1]
+local reserved = tonumber(ARGV[1])
+local actual = tonumber(ARGV[2])
+-- A rolled-over (expired) window holds nothing to settle. Never recreate the key here:
+-- HSET on a missing key would resurrect the counter with no TTL and leak it forever.
+if redis.call('EXISTS', key) == 0 then
+  return {0, 0, 0, 0}
+end
+local current = tonumber(redis.call('HGET', key, 'estimated_tokens') or '0')
+local refund = reserved - actual
+if refund < 0 then
+  refund = 0
+end
+if refund > current then
+  refund = current
+end
+local overrun = actual - reserved
+if overrun < 0 then
+  overrun = 0
+end
+local settled = current - refund + overrun
+redis.call('HSET', key, 'estimated_tokens', settled)
+return {1, refund, overrun, settled}
 """
 
 
@@ -351,6 +488,41 @@ class RedisSandboxBudgetTracker:
             prompt_chars=delta.prompt_chars,
             estimated_tokens=delta.estimated_tokens,
             usage=usage,
+            backend=self.backend,
+        )
+
+    def settle(
+        self,
+        reservation: BudgetReservation,
+        usage: dict[str, Any] | None,
+    ) -> BudgetSettlement | None:
+        """Replace this request's reserved token estimate with its measured usage.
+
+        Runs as one Lua script so the read-modify-write cannot interleave with a
+        concurrent reserve on the same sandbox and lose an increment.
+        """
+        actual = actual_total_tokens(usage)
+        if actual is None:
+            return None
+        try:
+            result = self.client.eval(
+                REDIS_SETTLE_SCRIPT,
+                1,
+                self._key(reservation.sandbox_id),
+                reservation.estimated_tokens,
+                actual,
+            )
+        except _BUDGET_BACKEND_ERRORS as exc:
+            raise BudgetBackendError("sandbox budget backend is unavailable") from exc
+        if not int(result[0]):
+            return None
+        return BudgetSettlement(
+            sandbox_id=reservation.sandbox_id,
+            reserved_estimated_tokens=reservation.estimated_tokens,
+            actual_tokens=actual,
+            refunded_tokens=int(result[1]),
+            overrun_tokens=int(result[2]),
+            settled_estimated_tokens=int(result[3]),
             backend=self.backend,
         )
 

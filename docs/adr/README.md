@@ -36,6 +36,7 @@ All ADRs in this set are `Accepted` and describe the current repository.
 | [0011](0011-async-files-and-batch-api.md) | Asynchronous Files and Batch API | Accepted |
 | [0012](0012-stateful-responses-store.md) | Server-side response state for the Responses API | Accepted |
 | [0013](0013-bundled-admin-console.md) | Opt-in bundled read-only admin console | Accepted |
+| [0014](0014-agent-action-receipts.md) | Agent-action receipts on the audit chain | Accepted |
 
 ## Process
 
