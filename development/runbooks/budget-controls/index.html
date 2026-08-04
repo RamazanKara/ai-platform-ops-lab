@@ -1324,7 +1324,14 @@
 <li>cumulative prompt characters</li>
 <li>cumulative estimated tokens</li>
 </ul>
-<p>Estimated tokens are calculated as <code>ceil(prompt characters / estimatedCharsPerToken) + requested max_tokens</code>. If the caller omits <code>max_tokens</code>, the gateway uses the configured <code>admission.maxCompletionTokens</code> ceiling for the estimate.</p>
+<p>Estimated tokens are reserved at admission as <code>ceil(prompt characters / estimatedCharsPerToken) + requested max_tokens</code>. If the caller omits <code>max_tokens</code>, the gateway uses the configured <code>admission.maxCompletionTokens</code> ceiling for the estimate.</p>
+<p>That reservation is the worst case the request could cost, because admission has to charge before the model runs. Once the runtime reports what the call actually consumed, the gateway <strong>settles</strong> the reservation: the estimate is replaced by the measured total, and the difference is returned to the window. This matters most for exactly the traffic this platform exists for, since a coding agent typically asks for a large <code>max_tokens</code> and emits a fraction of it; without settlement it would be metered as if it had emitted all of it and hit the window limit long before its real spend justified it.</p>
+<p>Settlement runs on the streaming and non-streaming paths alike, and the correction is recorded on the request's audit receipt as <code>budget_settlement</code> (reserved, actual, refunded, overrun, settled). Two behaviors are deliberate:</p>
+<ul>
+<li>A runtime that reports <strong>no usage</strong> leaves the reservation standing rather than refunding it, so a request that burned runtime capacity and then failed late is still charged.</li>
+<li>A settlement that fails never fails a request that already succeeded. The response is committed, and an unsettled reservation can only over-charge, never hand out free budget.</li>
+</ul>
+<p><code>estimatedCharsPerToken</code> is calibrated per model in <a href="https://github.com/RamazanKara/private-ai-platform-kit/blob/main/platform/model-catalog/models.yaml">the model catalog</a> and carried into the routing policy, because one global divisor is wrong in opposite directions for different models: prose in a Latin script runs near four characters per token, source code nearer three, and non-Latin scripts closer to one. A model that declares none falls back to the gateway default.</p>
 <p>The gateway supports two budget backends. <code>memory</code> stores usage in the gateway process and is useful for unit tests or single-pod development. <code>redis</code> stores usage in a Redis-compatible service and is the default for local and customer values because it works across multiple gateway replicas.</p>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <p>Set budgets in Helm values:</p>

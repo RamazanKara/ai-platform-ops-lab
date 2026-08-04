@@ -1290,6 +1290,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#chain-continuity-across-restarts" class="md-nav__link">
+    <span class="md-ellipsis">
+      Chain continuity across restarts
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#offline-auditor-path" class="md-nav__link">
     <span class="md-ellipsis">
       Offline auditor path
@@ -1336,7 +1345,11 @@ a wholesale rewrite is detectable, and to forward the audit stream to a SIEM for
 independent retention.</p>
 <h2 id="what-the-audit-events-are">What the audit events are<a class="headerlink" href="#what-the-audit-events-are" title="Permanent link">&para;</a></h2>
 <p>Every sandbox-bound gateway request emits one redacted audit event (<code>event: inference_request</code>;
-batch calls emit <code>event: batch_request</code>). These events are the <strong>tamper-evident receipts</strong>: each
+batch calls emit <code>event: batch_request</code>). Three more event types share the same chain: an
+<code>agent_action</code> receipt for what a workspace did beyond calling a model (denied egress, tool
+execution, file writes; see <a href="https://github.com/RamazanKara/private-ai-platform-kit/blob/main/docs/adr/0014-agent-action-receipts.md">ADR 0014</a>),
+a <code>rag_query</code> retrieval receipt from the RAG service on its own chain, and a <code>chain_start</code>
+record opening each chain. These events are the <strong>tamper-evident receipts</strong>: each
 is linked into a per-process SHA-256 hash chain (see
 <a href="https://github.com/RamazanKara/private-ai-platform-kit/blob/main/docs/adr/0006-tamper-evident-audit-hash-chain.md">ADR 0006</a>):</p>
 <ul>
@@ -1345,8 +1358,10 @@ is linked into a per-process SHA-256 hash chain (see
   <code>json.dumps(record, sort_keys=True, separators=(",", ":"))</code> over the event <strong>before</strong> the
   <code>prev_hash</code>/<code>record_hash</code> fields are stamped on.</li>
 </ul>
-<p>Each event carries a <code>chain_id</code> (<code>HOSTNAME:process_start</code>, hash-covered) identifying its
-per-replica chain, and a chain-covered <code>ts</code>. Events are logged twice per request (once to the
+<p>Each event carries a <code>chain_id</code> (<code>HOSTNAME:process_start:random</code>, hash-covered) identifying its
+per-replica chain, and a chain-covered <code>ts</code>. The random suffix is load-bearing: a pod that
+restarts twice within one second would otherwise mint the same id twice and the verifier would
+splice two unrelated chains together and report the seam as tampering. Events are logged twice per request (once to the
 audit logger <code>ai_platform_ops_lab.audit</code> and once to <code>uvicorn.error</code>), so a pod-log stream (and
 Loki) carries two byte-identical copies of every record. The verifier deduplicates them.</p>
 <p>Any edit, insertion, deletion, or reordering of emitted records breaks the chain and is detected
@@ -1412,6 +1427,41 @@ header on <strong>every</strong> path: the Promtail push (<code>clients[].tenant
 any anchor/export query. Otherwise pushes and reads will 401. The bundled reference keeps
 <code>auth_enabled: false</code> (single-tenant); see the comment in
 <a href="https://github.com/RamazanKara/private-ai-platform-kit/blob/main/deploy/observability/applications.yaml"><code>deploy/observability/applications.yaml</code></a>.</p>
+<h2 id="chain-continuity-across-restarts">Chain continuity across restarts<a class="headerlink" href="#chain-continuity-across-restarts" title="Permanent link">&para;</a></h2>
+<p>A chain covers one process lifetime. On its own that left a seam: a restarting pod began a
+fresh chain at genesis with nothing tying it to the one before, so an attacker who deleted a
+whole replica's chain produced something indistinguishable from an ordinary restart.</p>
+<p>Each process now opens its chain with a <code>chain_start</code> receipt naming the previous chain and
+the head it had reached, which makes the chains into a chain of their own. That record is
+hash-linked like any other, so the claim it makes about its predecessor is covered by the
+chain it opens.</p>
+<p>It only works if the head outlives the pod, so pick a store:</p>
+<div class="highlight"><pre><span></span><code># File on a mounted volume
+AUDIT_CHAIN_STORE_BACKEND=file
+AUDIT_CHAIN_STORE_PATH=/var/lib/inference-gateway/audit-chain-head.json
+
+# Or Redis, if the deployment already runs one
+AUDIT_CHAIN_STORE_BACKEND=redis
+AUDIT_CHAIN_STORE_KEY=inference-gateway:audit-chain-head
+</code></pre></div>
+<p>The default is <code>memory</code>, which keeps the pre-continuity behavior: chains still verify
+individually, and each <code>chain_start</code> honestly reports no predecessor rather than claiming one
+it cannot support. The RAG service has the same settings under <code>RAG_AUDIT_CHAIN_STORE_*</code>.</p>
+<p>The head is written on an interval (<code>AUDIT_CHAIN_PERSIST_INTERVAL_SECONDS</code>, default 5) and on
+graceful shutdown, not on every record, so a head-store write never sits on the request path.
+The cost is that a hard crash can leave the persisted head a few records behind the true tail;
+the verifier accounts for this by checking the named head appears in the predecessor rather
+than requiring it to be the predecessor's last record.</p>
+<p><code>audit-verify</code> reports continuity alongside the per-chain result:</p>
+<div class="highlight"><pre><span></span><code>python3 scripts/audit-verify.py exported-audit.log
+</code></pre></div>
+<ul>
+<li>A predecessor that is <strong>present but disagrees</strong> (truncated, or rewritten so its head
+  changed) is a failure.</li>
+<li>A predecessor that is simply <strong>absent</strong> is a note, not a failure, because verifying a
+  window of rotated logs legitimately starts mid-history. Pass <code>--strict-continuity</code> when the
+  input is meant to be a complete history and a missing predecessor should fail.</li>
+</ul>
 <h2 id="offline-auditor-path">Offline auditor path<a class="headerlink" href="#offline-auditor-path" title="Permanent link">&para;</a></h2>
 <p>An auditor does not need cluster access. Hand them the exported audit log and the anchor file;
 the verifier is stdlib-only Python:</p>

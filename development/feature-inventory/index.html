@@ -1275,7 +1275,7 @@
 
 
 <h1 id="feature-inventory">Feature inventory<a class="headerlink" href="#feature-inventory" title="Permanent link">&para;</a></h1>
-<p>This is the release-level source of truth for what <code>v0.27.1</code> implements, what is enabled by
+<p>This is the release-level source of truth for what <code>v0.28.0</code> implements, what is enabled by
 default, and what remains operator-owned. “Shipped” means code, configuration, tests, and an
 operator path exist in this repository; it does not mean a customer-specific integration is
 configured.</p>
@@ -1316,14 +1316,14 @@ configured.</p>
 <tr>
 <td>Anthropic Messages</td>
 <td>Shipped</td>
-<td>On, non-streaming</td>
-<td>Native translation through the governed chat path</td>
+<td>On, streaming and non-streaming</td>
+<td>Native translation through the governed chat path; streaming obeys the shared <code>allowStreaming</code> toggle</td>
 </tr>
 <tr>
 <td>OpenAI Responses</td>
 <td>Shipped</td>
 <td>On, synchronous</td>
-<td>Optional state is off by default; background/streaming are out of scope</td>
+<td>Optional state is off by default; background and streaming remain out of scope</td>
 </tr>
 <tr>
 <td>Responses server-side state</td>
@@ -1395,13 +1395,31 @@ configured.</p>
 <td>Rate limits and budgets</td>
 <td>Shipped</td>
 <td>Customer Redis profile on</td>
-<td>Atomic shared counters; fixed windows; fail policy is explicit</td>
+<td>Atomic shared counters; fixed windows; reservations settled against measured usage; fail policy is explicit</td>
 </tr>
 <tr>
 <td>Tamper-evident audit receipts</td>
 <td>Shipped</td>
 <td>On</td>
-<td>Redacted full-payload fingerprints, chain verifier, head anchors</td>
+<td>Redacted fingerprints, chain verifier, head anchors, and chain-of-chains continuity across restarts</td>
+</tr>
+<tr>
+<td>Agent-action receipts</td>
+<td>Shipped</td>
+<td>Off</td>
+<td><code>POST /v1/receipts</code>; closed action vocabulary, tenant-bound, records claims and enforces nothing (ADR 0014)</td>
+</tr>
+<tr>
+<td>RAG retrieval receipts</td>
+<td>Shipped</td>
+<td>On</td>
+<td>Own chain, same primitives and same verifier as the gateway</td>
+</tr>
+<tr>
+<td>Audit chain head persistence</td>
+<td>Shipped</td>
+<td>Memory (no continuity)</td>
+<td><code>file</code> or <code>redis</code> backend needed for cross-restart linkage; storage is operator-provided</td>
 </tr>
 <tr>
 <td>Read-only operator console</td>
@@ -1462,6 +1480,18 @@ configured.</p>
 <td>Shipped</td>
 <td>CI/nightly</td>
 <td>Conformance and model-quality evidence are labeled separately</td>
+</tr>
+<tr>
+<td>Client-SDK conformance</td>
+<td>Shipped</td>
+<td>On demand (<code>make sdk-conformance</code>)</td>
+<td>Real <code>openai</code>/<code>anthropic</code> clients against a mock runtime; SDKs live in a throwaway venv</td>
+</tr>
+<tr>
+<td>Egress exception expiry</td>
+<td>Shipped</td>
+<td>Report-only</td>
+<td>Rendered onto the NetworkPolicy; Kyverno denies expired, CronJob retires them when enforcement is on</td>
 </tr>
 <tr>
 <td>SBOM, provenance, signatures</td>

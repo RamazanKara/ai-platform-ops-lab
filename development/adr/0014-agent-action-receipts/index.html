@@ -10,28 +10,24 @@
       
       
       
-        <link rel="canonical" href="https://ramazankara.github.io/private-ai-platform-kit/development/release-verification/">
+        <link rel="canonical" href="https://ramazankara.github.io/private-ai-platform-kit/development/adr/0014-agent-action-receipts/">
       
       
-        <link rel="prev" href="../version-matrix/">
       
       
-        <link rel="next" href="../distribution/">
-      
-      
-      <link rel="icon" href="../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.49">
     
     
       
-        <title>Release verification - Private AI Platform Kit</title>
+        <title>0014. Agent-action receipts on the audit chain - Private AI Platform Kit</title>
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.6f8fc17f.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.6f8fc17f.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
       
       
 
@@ -50,7 +46,7 @@
       
     
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -76,7 +72,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#release-verification" class="md-skip">
+        <a href="#0014-agent-action-receipts-on-the-audit-chain" class="md-skip">
           Skip to content
         </a>
       
@@ -94,7 +90,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="Private AI Platform Kit" class="md-header__button md-logo" aria-label="Private AI Platform Kit" data-md-component="logo">
+    <a href="../.." title="Private AI Platform Kit" class="md-header__button md-logo" aria-label="Private AI Platform Kit" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -114,7 +110,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Release verification
+              0014. Agent-action receipts on the audit chain
             
           </span>
         </div>
@@ -223,7 +219,7 @@
   
   
     <li class="md-tabs__item">
-      <a href=".." class="md-tabs__link">
+      <a href="../.." class="md-tabs__link">
         
   
     
@@ -242,7 +238,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../tutorials/" class="md-tabs__link">
+        <a href="../../tutorials/" class="md-tabs__link">
           
   
     
@@ -262,7 +258,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../getting-started/" class="md-tabs__link">
+        <a href="../../getting-started/" class="md-tabs__link">
           
   
     
@@ -278,13 +274,11 @@
         
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="../feature-inventory/" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../../feature-inventory/" class="md-tabs__link">
           
   
     
@@ -304,7 +298,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../decision-guide/" class="md-tabs__link">
+        <a href="../../decision-guide/" class="md-tabs__link">
           
   
     
@@ -339,7 +333,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="Private AI Platform Kit" class="md-nav__button md-logo" aria-label="Private AI Platform Kit" data-md-component="logo">
+    <a href="../.." title="Private AI Platform Kit" class="md-nav__button md-logo" aria-label="Private AI Platform Kit" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -369,7 +363,7 @@
   
   
     <li class="md-nav__item">
-      <a href=".." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -414,7 +408,7 @@
           
           
           <div class="md-nav__link md-nav__container">
-            <a href="../tutorials/" class="md-nav__link ">
+            <a href="../../tutorials/" class="md-nav__link ">
               
   
   <span class="md-ellipsis">
@@ -447,7 +441,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../quickstart/" class="md-nav__link">
+      <a href="../../quickstart/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -508,7 +502,7 @@
           
           
           <div class="md-nav__link md-nav__container">
-            <a href="../runbooks/" class="md-nav__link ">
+            <a href="../../runbooks/" class="md-nav__link ">
               
   
   <span class="md-ellipsis">
@@ -539,7 +533,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../getting-started/" class="md-nav__link">
+      <a href="../../getting-started/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -560,7 +554,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../client-examples/" class="md-nav__link">
+      <a href="../../client-examples/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -581,7 +575,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../customer-handoff-example/" class="md-nav__link">
+      <a href="../../customer-handoff-example/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -602,7 +596,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../regulated-offline-tenant-example/" class="md-nav__link">
+      <a href="../../regulated-offline-tenant-example/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -623,7 +617,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../gpu-coding-agent-tenant-example/" class="md-nav__link">
+      <a href="../../gpu-coding-agent-tenant-example/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -650,10 +644,8 @@
       
   
   
-    
   
   
-  
     
     
       
@@ -680,22 +672,19 @@
     
     
       
-        
-        
-      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
         
           
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
             
   
   <span class="md-ellipsis">
@@ -706,7 +695,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             Reference
@@ -720,7 +709,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../feature-inventory/" class="md-nav__link">
+      <a href="../../feature-inventory/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -741,7 +730,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../production-readiness/" class="md-nav__link">
+      <a href="../../production-readiness/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -762,7 +751,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../benchmarks-and-evals/" class="md-nav__link">
+      <a href="../../benchmarks-and-evals/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -783,7 +772,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../capacity-sizing/" class="md-nav__link">
+      <a href="../../capacity-sizing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -804,7 +793,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../cost-model/" class="md-nav__link">
+      <a href="../../cost-model/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -825,7 +814,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../version-matrix/" class="md-nav__link">
+      <a href="../../version-matrix/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -843,30 +832,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    Release verification
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../release-verification/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -875,80 +844,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#helm-oci-charts" class="md-nav__link">
-    <span class="md-ellipsis">
-      Helm OCI Charts
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#image-signatures" class="md-nav__link">
-    <span class="md-ellipsis">
-      Image Signatures
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#chart-signatures" class="md-nav__link">
-    <span class="md-ellipsis">
-      Chart Signatures
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#provenance-and-sbom-attestations" class="md-nav__link">
-    <span class="md-ellipsis">
-      Provenance And SBOM Attestations
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#sbom-and-scan-checksums" class="md-nav__link">
-    <span class="md-ellipsis">
-      SBOM And Scan Checksums
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#strict-evidence" class="md-nav__link">
-    <span class="md-ellipsis">
-      Strict Evidence
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -961,7 +856,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../distribution/" class="md-nav__link">
+      <a href="../../distribution/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -982,7 +877,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../glossary/" class="md-nav__link">
+      <a href="../../glossary/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1003,7 +898,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../references/" class="md-nav__link">
+      <a href="../../references/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1074,7 +969,7 @@
           
           
           <div class="md-nav__link md-nav__container">
-            <a href="../adr/" class="md-nav__link ">
+            <a href="../" class="md-nav__link ">
               
   
   <span class="md-ellipsis">
@@ -1105,7 +1000,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../decision-guide/" class="md-nav__link">
+      <a href="../../decision-guide/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1126,7 +1021,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../faq/" class="md-nav__link">
+      <a href="../../faq/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1147,7 +1042,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../architecture/" class="md-nav__link">
+      <a href="../../architecture/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1168,7 +1063,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../security-overview/" class="md-nav__link">
+      <a href="../../security-overview/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1189,7 +1084,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../threat-model/" class="md-nav__link">
+      <a href="../../threat-model/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1210,7 +1105,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../owasp-llm-top-10-mapping/" class="md-nav__link">
+      <a href="../../owasp-llm-top-10-mapping/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1231,7 +1126,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../ai-governance-crosswalk/" class="md-nav__link">
+      <a href="../../ai-governance-crosswalk/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1252,7 +1147,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../scope-and-non-goals/" class="md-nav__link">
+      <a href="../../scope-and-non-goals/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1273,7 +1168,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../agent-sandbox-integration/" class="md-nav__link">
+      <a href="../../agent-sandbox-integration/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1296,7 +1191,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../proof/" class="md-nav__link">
+      <a href="../../proof/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1344,54 +1239,36 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#helm-oci-charts" class="md-nav__link">
+  <a href="#context" class="md-nav__link">
     <span class="md-ellipsis">
-      Helm OCI Charts
+      Context
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#image-signatures" class="md-nav__link">
+  <a href="#decision" class="md-nav__link">
     <span class="md-ellipsis">
-      Image Signatures
+      Decision
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#chart-signatures" class="md-nav__link">
+  <a href="#consequences" class="md-nav__link">
     <span class="md-ellipsis">
-      Chart Signatures
+      Consequences
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#provenance-and-sbom-attestations" class="md-nav__link">
+  <a href="#alternatives-considered" class="md-nav__link">
     <span class="md-ellipsis">
-      Provenance And SBOM Attestations
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#sbom-and-scan-checksums" class="md-nav__link">
-    <span class="md-ellipsis">
-      SBOM And Scan Checksums
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#strict-evidence" class="md-nav__link">
-    <span class="md-ellipsis">
-      Strict Evidence
+      Alternatives considered
     </span>
   </a>
   
@@ -1412,7 +1289,7 @@
                   
 
   
-    <a href="https://github.com/RamazanKara/private-ai-platform-kit/edit/main/docs/release-verification.md" title="Edit this page" class="md-content__button md-icon">
+    <a href="https://github.com/RamazanKara/private-ai-platform-kit/edit/main/docs/adr/0014-agent-action-receipts.md" title="Edit this page" class="md-content__button md-icon">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -1420,99 +1297,87 @@
   
 
 
-<h1 id="release-verification">Release Verification<a class="headerlink" href="#release-verification" title="Permanent link">&para;</a></h1>
-<p>Use this checklist before trusting a public release in a customer-owned cluster.</p>
-<p>Set the release and repository once:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">RELEASE</span><span class="o">=</span>v0.28.0
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">IMAGE_REPO</span><span class="o">=</span>ghcr.io/ramazankara/private-ai-platform-kit
-</code></pre></div>
-<h2 id="helm-oci-charts">Helm OCI Charts<a class="headerlink" href="#helm-oci-charts" title="Permanent link">&para;</a></h2>
-<p>Tag builds publish each chart to <code>oci://$IMAGE_REPO/charts</code>.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>helm<span class="w"> </span>pull<span class="w"> </span><span class="s2">&quot;oci://</span><span class="nv">$IMAGE_REPO</span><span class="s2">/charts/inference-gateway&quot;</span><span class="w"> </span>--version<span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">RELEASE</span><span class="p">#v</span><span class="si">}</span><span class="s2">&quot;</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>helm<span class="w"> </span>pull<span class="w"> </span><span class="s2">&quot;oci://</span><span class="nv">$IMAGE_REPO</span><span class="s2">/charts/rag-service&quot;</span><span class="w"> </span>--version<span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">RELEASE</span><span class="p">#v</span><span class="si">}</span><span class="s2">&quot;</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>helm<span class="w"> </span>pull<span class="w"> </span><span class="s2">&quot;oci://</span><span class="nv">$IMAGE_REPO</span><span class="s2">/charts/agent-workspace&quot;</span><span class="w"> </span>--version<span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">RELEASE</span><span class="p">#v</span><span class="si">}</span><span class="s2">&quot;</span>
-</code></pre></div>
-<p>Render the downloaded chart before installing:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>helm<span class="w"> </span>template<span class="w"> </span>verify-inference<span class="w"> </span><span class="s2">&quot;inference-gateway-</span><span class="si">${</span><span class="nv">RELEASE</span><span class="p">#v</span><span class="si">}</span><span class="s2">.tgz&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--values<span class="w"> </span>deploy/clusters/customer/values/inference-gateway.yaml<span class="w"> </span>&gt;/tmp/inference.yaml
-</code></pre></div>
-<h2 id="image-signatures">Image Signatures<a class="headerlink" href="#image-signatures" title="Permanent link">&para;</a></h2>
-<p>Release images are signed by digest with Cosign in GitHub Actions.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>cosign<span class="w"> </span>verify<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$IMAGE_REPO</span><span class="s2">/inference-gateway:</span><span class="nv">$RELEASE</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>--certificate-identity-regexp<span class="w"> </span><span class="s1">&#39;https://github.com/.+/.github/workflows/ci.yml@refs/tags/.+&#39;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>--certificate-oidc-issuer<span class="w"> </span>https://token.actions.githubusercontent.com
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>cosign<span class="w"> </span>verify<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$IMAGE_REPO</span><span class="s2">/rag-service:</span><span class="nv">$RELEASE</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span>--certificate-identity-regexp<span class="w"> </span><span class="s1">&#39;https://github.com/.+/.github/workflows/ci.yml@refs/tags/.+&#39;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span>--certificate-oidc-issuer<span class="w"> </span>https://token.actions.githubusercontent.com
-</code></pre></div>
-<p>Release images are also multi-arch (<code>linux/amd64</code> and <code>linux/arm64</code>); the signature covers the manifest list, so the same <code>cosign verify</code> works on Apple Silicon and arm64 (Graviton/Ampere) clusters.</p>
-<h2 id="chart-signatures">Chart Signatures<a class="headerlink" href="#chart-signatures" title="Permanent link">&para;</a></h2>
-<p>Helm chart OCI artifacts are cosign-signed by digest in the same release workflow as the images.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>cosign<span class="w"> </span>verify<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$IMAGE_REPO</span><span class="s2">/charts/inference-gateway:</span><span class="si">${</span><span class="nv">RELEASE</span><span class="p">#v</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>--certificate-identity-regexp<span class="w"> </span><span class="s1">&#39;https://github.com/.+/.github/workflows/ci.yml@refs/tags/.+&#39;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>--certificate-oidc-issuer<span class="w"> </span>https://token.actions.githubusercontent.com
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>cosign<span class="w"> </span>verify<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$IMAGE_REPO</span><span class="s2">/charts/rag-service:</span><span class="si">${</span><span class="nv">RELEASE</span><span class="p">#v</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span>--certificate-identity-regexp<span class="w"> </span><span class="s1">&#39;https://github.com/.+/.github/workflows/ci.yml@refs/tags/.+&#39;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">  </span>--certificate-oidc-issuer<span class="w"> </span>https://token.actions.githubusercontent.com
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>
-<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>cosign<span class="w"> </span>verify<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$IMAGE_REPO</span><span class="s2">/charts/agent-workspace:</span><span class="si">${</span><span class="nv">RELEASE</span><span class="p">#v</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">  </span>--certificate-identity-regexp<span class="w"> </span><span class="s1">&#39;https://github.com/.+/.github/workflows/ci.yml@refs/tags/.+&#39;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">  </span>--certificate-oidc-issuer<span class="w"> </span>https://token.actions.githubusercontent.com
-</code></pre></div>
-<p>Chart OCI tags drop the leading <code>v</code> (<code>${RELEASE#v}</code>) to match the chart <code>version</code>, while runtime image tags keep it.</p>
-<h2 id="provenance-and-sbom-attestations">Provenance And SBOM Attestations<a class="headerlink" href="#provenance-and-sbom-attestations" title="Permanent link">&para;</a></h2>
-<p>Tag builds publish SLSA provenance and SPDX SBOM attestations to GHCR for each runtime image.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>cosign<span class="w"> </span>verify-attestation<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$IMAGE_REPO</span><span class="s2">/inference-gateway:</span><span class="nv">$RELEASE</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--type<span class="w"> </span>slsaprovenance<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>--certificate-identity-regexp<span class="w"> </span><span class="s1">&#39;https://github.com/.+/.github/workflows/ci.yml@refs/tags/.+&#39;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span>--certificate-oidc-issuer<span class="w"> </span>https://token.actions.githubusercontent.com
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>cosign<span class="w"> </span>verify-attestation<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$IMAGE_REPO</span><span class="s2">/rag-service:</span><span class="nv">$RELEASE</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">  </span>--type<span class="w"> </span>slsaprovenance<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">  </span>--certificate-identity-regexp<span class="w"> </span><span class="s1">&#39;https://github.com/.+/.github/workflows/ci.yml@refs/tags/.+&#39;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">  </span>--certificate-oidc-issuer<span class="w"> </span>https://token.actions.githubusercontent.com
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>cosign<span class="w"> </span>verify-attestation<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$IMAGE_REPO</span><span class="s2">/inference-gateway:</span><span class="nv">$RELEASE</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">  </span>--type<span class="w"> </span>https://spdx.dev/Document<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">  </span>--certificate-identity-regexp<span class="w"> </span><span class="s1">&#39;https://github.com/.+/.github/workflows/ci.yml@refs/tags/.+&#39;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">  </span>--certificate-oidc-issuer<span class="w"> </span>https://token.actions.githubusercontent.com
-<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>
-<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>cosign<span class="w"> </span>verify-attestation<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$IMAGE_REPO</span><span class="s2">/rag-service:</span><span class="nv">$RELEASE</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="w">  </span>--type<span class="w"> </span>https://spdx.dev/Document<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="w">  </span>--certificate-identity-regexp<span class="w"> </span><span class="s1">&#39;https://github.com/.+/.github/workflows/ci.yml@refs/tags/.+&#39;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="w">  </span>--certificate-oidc-issuer<span class="w"> </span>https://token.actions.githubusercontent.com
-</code></pre></div>
-<h2 id="sbom-and-scan-checksums">SBOM And Scan Checksums<a class="headerlink" href="#sbom-and-scan-checksums" title="Permanent link">&para;</a></h2>
-<p>Download the release assets and verify the checksum manifest:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>gh<span class="w"> </span>release<span class="w"> </span>download<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$RELEASE</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span>--pattern<span class="w"> </span><span class="s1">&#39;inference-gateway.spdx.json&#39;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span>--pattern<span class="w"> </span><span class="s1">&#39;rag-service.spdx.json&#39;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span>--pattern<span class="w"> </span><span class="s1">&#39;trivy-results.sarif&#39;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span>--pattern<span class="w"> </span><span class="s1">&#39;trivy-rag-results.sarif&#39;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span>--pattern<span class="w"> </span><span class="s1">&#39;supply-chain-checksums.txt&#39;</span>
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>
-<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>sha256sum<span class="w"> </span>--check<span class="w"> </span>supply-chain-checksums.txt
-</code></pre></div>
-<p>Review the SBOMs and SARIF files before promotion. The Trivy release gate is configured to fail on HIGH or CRITICAL image vulnerabilities.</p>
-<h2 id="strict-evidence">Strict Evidence<a class="headerlink" href="#strict-evidence" title="Permanent link">&para;</a></h2>
-<p>Strict release evidence must be generated from current artifacts, not sample evidence:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>make<span class="w"> </span>validate-full
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>make<span class="w"> </span>image-scan
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>make<span class="w"> </span>supply-chain-check
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>make<span class="w"> </span>loadtest-local
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>make<span class="w"> </span>evidence
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>make<span class="w"> </span>release-gate-strict
-</code></pre></div>
-<p>For a live customer-style validation path, run the local cluster checks and generate live evidence:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nv">QUICKSTART_DIRECT_APPLY</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>make<span class="w"> </span>quickstart
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>make<span class="w"> </span>trace-smoke
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>make<span class="w"> </span>tenant-smoke
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>make<span class="w"> </span>agent-smoke
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>make<span class="w"> </span>evidence<span class="w"> </span><span class="nv">LIVE</span><span class="o">=</span><span class="m">1</span>
-</code></pre></div>
-<p>Record the command output, generated evidence paths under <code>results/</code>, image digests, chart versions, and GitHub Actions run URL in the release notes.</p>
+<h1 id="0014-agent-action-receipts-on-the-audit-chain">0014. Agent-action receipts on the audit chain<a class="headerlink" href="#0014-agent-action-receipts-on-the-audit-chain" title="Permanent link">&para;</a></h1>
+<ul>
+<li>Status: Accepted</li>
+<li>Date: 2026-08-04</li>
+<li>Deciders: Platform maintainer</li>
+</ul>
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p>The kit's claim is that you can prove what a coding agent did. What the audit chain actually
+proved was narrower: every record carried <code>action_type: "model_call"</code>, and that was the only
+value the gateway ever emitted. The chain is a complete, tamper-evident record of what an agent
+asked a model, and says nothing about what the agent then did with the answer.</p>
+<p>The gap shows up in the project's own demo. The most persuasive moment in
+<code>make agent-sandbox-demo</code> is the blocked exfiltration attempt, and it produces a NetworkPolicy
+packet drop: real enforcement, no receipt. An auditor asking "show me every time this agent tried
+to reach the internet" gets a CNI log if the operator kept one, not something <code>make audit-verify</code>
+can check offline. The same is true for the actions that matter most in a workspace: commands
+executed, files written, credentials requested.</p>
+<p>The enforcement for these already exists and is not in the gateway. Egress is denied by
+default-deny networking, workload behavior is watched by the opt-in Falco/Tetragon application,
+and the workspace is a hardened sandbox. What is missing is not a control. It is the evidence
+trail that ties those controls to the same verifiable chain as the model calls.</p>
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
+<p>Add an authenticated receipt intake to the gateway: <code>POST /v1/receipts</code>, off by default
+(<code>AGENT_RECEIPTS_ENABLED</code>). It accepts a typed agent action and links it into the same
+per-process hash chain as model calls, with the same redaction discipline and the same operator
+verifier.</p>
+<p>The action taxonomy is closed and small: <code>egress_denied</code>, <code>egress_allowed</code>, <code>tool_exec</code>,
+<code>file_write</code>, <code>credential_request</code>, <code>workspace_lifecycle</code>. An unrecognized <code>action_type</code> is
+rejected rather than chained, so the taxonomy stays a reviewed vocabulary instead of drifting
+into free text that no report can aggregate.</p>
+<p>The <strong>boundary is the important part of this decision</strong>: the gateway accepts and chains
+receipts. It does not enforce sandbox-internal policy, and a receipt is never treated as
+permission for anything. A submitted receipt is a claim by the sandbox about something that
+already happened, recorded so it can be audited; it is not the control that stopped it. Whether
+an action was actually blocked is decided by the NetworkPolicy, the Kyverno policy, or the
+runtime-security agent, exactly as before.</p>
+<p>Because a receipt is an attributable claim, the intake is bound to the caller's identity the
+same way every other endpoint is: the sandbox on the receipt comes from the caller's bound
+sandbox (the audience-bound workspace token or an API-key record), and a receipt claiming a
+different sandbox is rejected. A workspace can add to its own history and cannot write another
+tenant's.</p>
+<p>Producers are whatever the operator already runs. Falco and Tetragon alerts, CNI denied-flow
+logs, and an agent's own tool hooks are all just callers of this endpoint; the kit ships the
+intake, the taxonomy, the chaining, and the verification, not a collection agent.</p>
+<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
+<ul>
+<li>"Prove what it did" becomes checkable offline for more than model calls: <code>make audit-verify</code>
+  verifies agent actions and model calls in one chain, and a deleted action receipt breaks the
+  chain like any other record.</li>
+<li>The chain's value now depends partly on producers the kit does not control. A receipt stream is
+  only as complete as what the operator wired into it, and the docs say so rather than implying
+  full coverage. Completeness is an operator property; integrity is the kit's.</li>
+<li>Receipts are self-reported by the sandbox, so they are evidence of claims, not proof of
+  behavior. This is why the boundary above matters: an agent that never reports a <code>tool_exec</code>
+  simply has no receipt for it, and only the out-of-band producers (Falco, CNI) close that. The
+  chain makes tampering with reported history detectable; it does not make unreported history
+  appear.</li>
+<li>One more opt-in endpoint on the gateway, with a bounded body, its own rate limit path, and a
+  closed vocabulary, so an enabled intake cannot become an unbounded log sink.</li>
+</ul>
+<h2 id="alternatives-considered">Alternatives considered<a class="headerlink" href="#alternatives-considered" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>A separate receipts service.</strong> Cleaner separation, but the chain is per-process and the
+  operator verifier groups by <code>chain_id</code>; a second service means a second chain to anchor and
+  correlate for no gain in the single-cluster topology this kit targets. Rejected. (The RAG
+  service does run its own chain, but it is an independently deployed service with its own
+  lifecycle; a receipts sink would exist only to hold receipts.)</li>
+<li><strong>Deriving receipts from Falco alerts inside the gateway.</strong> Would make the gateway parse and
+  poll another system's event format and turn a governance service into a log collector, coupling
+  the kit to a specific runtime-security stack it deliberately ships as optional. Rejected in
+  favor of an intake anything can post to.</li>
+<li><strong>Free-form <code>action_type</code> strings.</strong> Simpler to accept, but the crosswalk and evidence pack
+  aggregate by action type; free text makes every report a best-effort string match and makes the
+  taxonomy unreviewable. Rejected.</li>
+<li><strong>Trusting a submitted <code>sandbox_id</code>.</strong> Would let any workspace write into another tenant's
+  history, which is precisely the property that makes the chain worth anything. Rejected.</li>
+<li><strong>Leaving it as an operator concern (status quo).</strong> The receipts already exist as logs; the kit
+  could keep documenting that operators forward them to a SIEM. Rejected because the differentiator
+  is verifiable evidence, and a log an auditor cannot verify offline is the thing this project
+  exists to improve on.</li>
+</ul>
 
 
 
@@ -1569,10 +1434,10 @@
     </div>
     
     
-    <script id="__config" type="application/json">{"base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.tracking", "navigation.indexes", "content.code.copy", "content.action.edit", "search.suggest", "search.highlight", "toc.follow"], "search": "../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.tracking", "navigation.indexes", "content.code.copy", "content.action.edit", "search.suggest", "search.highlight", "toc.follow"], "search": "../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.88dd0f4e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.88dd0f4e.min.js"></script>
       
     
   </body>
