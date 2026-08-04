@@ -123,12 +123,51 @@ curl -fsS "$GATEWAY/v1/messages" \
 
 Translation is faithful but pragmatic: message and `system` text are exact; Anthropic tool
 definitions (`name`/`description`/`input_schema`) and `tool_use`/`tool_result` content blocks
-are mapped to their closest OpenAI equivalents on a best-effort basis. Streaming is **not**
-supported on `/v1/messages` in this release (send `stream: false`, or use
-`/v1/chat/completions` for OpenAI-shaped streaming); a streaming request is rejected with a
-clear `streaming_not_supported` error. For Anthropic-shaped features the native endpoint does
-not yet cover, such as streaming or blocks with no OpenAI equivalent, the translation-sidecar
-approach below remains available.
+are mapped to their closest OpenAI equivalents on a best-effort basis. For Anthropic-shaped
+features the native endpoint does not cover, such as content blocks with no OpenAI
+equivalent, the translation-sidecar approach below remains available.
+
+### Streaming
+
+`stream: true` returns the Anthropic event sequence (`message_start`, then a
+`content_block_start` / `content_block_delta` / `content_block_stop` run per content block,
+then `message_delta` with the stop reason and usage, then `message_stop`), translated from
+the same governed chat stream `/v1/chat/completions` uses. This is what an interactive
+Claude-style agent needs: the Anthropic SDKs stream by default, so before this the native
+endpoint served scripts rather than agents.
+
+```python
+import anthropic
+
+client = anthropic.Anthropic(base_url=GATEWAY, api_key=KEY)
+with client.messages.stream(
+    model="qwen2.5:0.5b",
+    max_tokens=128,
+    messages=[{"role": "user", "content": "Give me one fact about the sea."}],
+) as stream:
+    for text in stream.text_stream:
+        print(text, end="", flush=True)
+    final = stream.get_final_message()
+```
+
+Streaming obeys the same `admission.allowStreaming` toggle as chat, so one setting governs
+both surfaces. Two behaviors are worth knowing:
+
+- **Token counts arrive at the end.** OpenAI-compatible runtimes only report usage on a
+  terminal event, which is after `message_start` has to be sent, so `message_start` carries
+  zeros and the true counts ride on the final `message_delta`. The Anthropic SDKs reconcile
+  the final usage from there, so `get_final_message().usage` is correct.
+- **The output guardrail flags rather than redacts.** Streamed bytes are already committed to
+  the wire, so the guardrail scans the assistant text at end-of-stream and records a finding.
+  Use non-streaming requests where the guardrail must be able to block.
+
+Reasoning and thinking deltas cannot leak through this path: the translator reads only
+`delta.content` and `delta.tool_calls`, so anything else a runtime streams has no route into
+the Anthropic events.
+
+`make sdk-conformance` drives the real `anthropic` and `openai` clients against the gateway
+and asserts the vendors' own parsers accept it, including the streamed tool-call
+reconstruction. That, rather than the OpenAPI snapshot, is the compatibility evidence.
 
 ## OpenAI Responses API (`/v1/responses`)
 

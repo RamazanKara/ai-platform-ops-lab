@@ -6,6 +6,7 @@ import ipaddress
 import re
 import shutil
 import subprocess
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -95,6 +96,16 @@ def validate_spec(spec: dict[str, Any]) -> None:
             raise ValueError(f"spec.network.allowedEgressCidrs[{index}] must be a mapping")
         if not item.get("catalogRef"):
             raise ValueError(f"spec.network.allowedEgressCidrs[{index}].catalogRef is required")
+        # An exception with no expiry is a permanent one. The date is what the chart
+        # stamps onto the NetworkPolicy for the in-cluster expiry check, so onboarding a
+        # tenant without it would produce an exception nothing can retire.
+        expires_on = item.get("expiresOn")
+        if not expires_on:
+            raise ValueError(f"spec.network.allowedEgressCidrs[{index}].expiresOn is required (YYYY-MM-DD)")
+        try:
+            date.fromisoformat(str(expires_on))
+        except ValueError as exc:
+            raise ValueError(f"spec.network.allowedEgressCidrs[{index}].expiresOn must be YYYY-MM-DD") from exc
         ipaddress.ip_network(str(item.get("cidr")), strict=False)
         ports = item.get("ports")
         if not isinstance(ports, list) or not ports:
@@ -373,6 +384,9 @@ def agent_workspace_values(spec: dict[str, Any]) -> dict[str, Any]:
                     "catalogRef": item["catalogRef"],
                     "cidr": item["cidr"],
                     "ports": item["ports"],
+                    # Carried through to the rendered NetworkPolicy annotation so the
+                    # cluster can retire the exception when its review lapses.
+                    "expiresOn": str(item["expiresOn"]),
                 }
                 for item in network.get("allowedEgressCidrs", [])
             ],

@@ -32,6 +32,14 @@ class ModelRoute:
     canary_model_id: str = ""
     canary_weight: float = 0.0
     shadow_model_id: str = ""
+    # Characters per token for this model's budget estimate, 0 to use the gateway default.
+    # A single global divisor is wrong in opposite directions for different models: prose
+    # in a Latin script runs near four characters per token, source code nearer three, and
+    # CJK or other non-Latin text close to one. On a platform whose whole point is coding
+    # agents, the global default systematically under-estimates the traffic it exists for.
+    # Keeping the number per-model in the reviewed catalog makes it calibrated data rather
+    # than a constant nobody revisits.
+    estimated_chars_per_token: int = 0
 
 
 @dataclass(frozen=True)
@@ -87,6 +95,11 @@ class ModelRoutingPolicy:
                 raise ValueError(f"ModelRoutingPolicy model {model_id} backend must be one of {sorted(VALID_BACKENDS)}")
             if not 0.0 <= canary_weight <= 1.0:
                 raise ValueError(f"ModelRoutingPolicy model {model_id} canary.weight must be between 0 and 1")
+            chars_per_token = item.get("estimatedCharsPerToken", 0)
+            if isinstance(chars_per_token, bool) or not isinstance(chars_per_token, int) or chars_per_token < 0:
+                raise ValueError(
+                    f"ModelRoutingPolicy model {model_id} estimatedCharsPerToken must be a non-negative integer"
+                )
             for name in (model_id, *aliases):
                 if name in seen:
                     raise ValueError(f"ModelRoutingPolicy duplicate model or alias: {name}")
@@ -100,6 +113,7 @@ class ModelRoutingPolicy:
                     canary_model_id=canary_model_id,
                     canary_weight=canary_weight,
                     shadow_model_id=shadow_model_id,
+                    estimated_chars_per_token=chars_per_token,
                 )
             )
         return cls(tuple(routes))

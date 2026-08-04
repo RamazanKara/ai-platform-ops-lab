@@ -19,6 +19,19 @@ metadata:
   namespace: {{ .Values.namespace.name }}
   labels:
     {{- include "agent-workspace.labels" . | nindent 4 }}
+    {{- if .Values.networkPolicy.allowedEgressCidrs }}
+    platform.ai/egress-governed: "true"
+    {{- end }}
+  {{- if .Values.networkPolicy.allowedEgressCidrs }}
+  {{- /* Carry the catalog expiry into the cluster. Until this existed, "every exception
+         is a reviewed, expiring catalog entry" was only true in the repository: an entry
+         could pass its expiresOn while the rendered NetworkPolicy kept allowing the
+         traffic, because nothing in the cluster knew the date. The earliest expiry across
+         this policy's entries is what the Kyverno rule and the expiry CronJob read. */}}
+  annotations:
+    platform.ai/egress-expires-on: {{ include "agent-workspace.earliestEgressExpiry" . | quote }}
+    platform.ai/egress-catalog-refs: {{ include "agent-workspace.egressCatalogRefs" . | quote }}
+  {{- end }}
 spec:
   podSelector: {}
   policyTypes:
@@ -55,6 +68,10 @@ spec:
            scans the reviewed tenant spec files, so this closes the --set / out-of-band
            overlay bypass. */}}
     {{- $catalogRef := required (printf "agent-workspace: allowedEgressCidrs entry %s must set a non-empty catalogRef governed by platform/network/egress-catalog.yaml" .cidr) .catalogRef }}
+    {{- /* An exception with no expiry is a permanent one. Requiring the date at render
+           time is what makes the in-cluster expiry check meaningful: it cannot be skipped
+           by leaving the field out. */}}
+    {{- $expiresOn := required (printf "agent-workspace: allowedEgressCidrs entry %s must set expiresOn (YYYY-MM-DD) matching its catalog entry" .cidr) .expiresOn }}
     - to:
         - ipBlock:
             cidr: {{ .cidr | quote }}

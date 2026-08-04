@@ -1,0 +1,139 @@
+{{- if and .Values.networkPolicy.enabled .Values.networkPolicy.expiryEnforcement.enabled }}
+{{- /* Cluster-side expiry for approved egress exceptions.
+
+       The repository check (scripts/egress-governance.py) validates expiresOn at review
+       time, which means an exception expires in CI and not on the wire: GitOps converges
+       the cluster to the repository, and the repository still holds the old NetworkPolicy
+       until a human edits it. CI goes red, the traffic keeps flowing.
+
+       This job closes that. It reads the expiry the chart stamped onto the policy and,
+       once the date has passed, removes the approved-egress policy. The default-deny
+       policy stays, so the workspace fails closed to platform-internal traffic rather
+       than losing all governance. */}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: agent-workspace-egress-expiry
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "agent-workspace.labels" . | nindent 4 }}
+# No ambient token, matching every other ServiceAccount in this namespace. The one pod
+# that needs to reach the API server opts in at the pod level below, so mounting a
+# credential stays a per-workload decision rather than a namespace-wide default.
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: agent-workspace-egress-expiry
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "agent-workspace.labels" . | nindent 4 }}
+rules:
+  # Read-only unless the operator turned enforcement on. Deleting a NetworkPolicy is a
+  # real capability (it is how lateral-movement restrictions get lifted), so the grant
+  # tracks the toggle instead of being held permanently against the day it might be used.
+  # Even then it is scoped by resourceName to the single policy this job may retire.
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["networkpolicies"]
+    resourceNames: ["agent-workspace-approved-egress"]
+    verbs:
+      - get
+      {{- if .Values.networkPolicy.expiryEnforcement.removeExpired }}
+      - delete
+      {{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: agent-workspace-egress-expiry
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "agent-workspace.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: agent-workspace-egress-expiry
+subjects:
+  - kind: ServiceAccount
+    name: agent-workspace-egress-expiry
+    namespace: {{ .Values.namespace.name }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: agent-workspace-egress-expiry
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "agent-workspace.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.networkPolicy.expiryEnforcement.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  startingDeadlineSeconds: 600
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            {{- include "agent-workspace.labels" . | nindent 12 }}
+        spec:
+          restartPolicy: Never
+          serviceAccountName: agent-workspace-egress-expiry
+          automountServiceAccountToken: true
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: egress-expiry
+              image: {{ .Values.networkPolicy.expiryEnforcement.image | quote }}
+              imagePullPolicy: IfNotPresent
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 32Mi
+                limits:
+                  cpu: 100m
+                  memory: 64Mi
+              env:
+                - name: POLICY_NAME
+                  value: agent-workspace-approved-egress
+                - name: POLICY_NAMESPACE
+                  value: {{ .Values.namespace.name | quote }}
+                - name: ENFORCE
+                  value: {{ .Values.networkPolicy.expiryEnforcement.removeExpired | quote }}
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -eu
+                  expiry="$(kubectl -n "$POLICY_NAMESPACE" get networkpolicy "$POLICY_NAME" \
+                    -o jsonpath='{.metadata.annotations.platform\.ai/egress-expires-on}' 2>/dev/null || true)"
+                  if [ -z "$expiry" ]; then
+                    echo "no governed egress exception on $POLICY_NAME; nothing to expire"
+                    exit 0
+                  fi
+                  today="$(date -u +%Y-%m-%d)"
+                  # ISO-8601 dates compare correctly as strings, so this needs no date math.
+                  if [ "$today" \< "$expiry" ] || [ "$today" = "$expiry" ]; then
+                    echo "approved egress valid until $expiry (today $today)"
+                    exit 0
+                  fi
+                  echo "approved egress expired on $expiry (today $today)"
+                  if [ "$ENFORCE" != "true" ]; then
+                    echo "removeExpired is false; reporting only. Traffic is STILL ALLOWED."
+                    exit 1
+                  fi
+                  kubectl -n "$POLICY_NAMESPACE" delete networkpolicy "$POLICY_NAME"
+                  echo "removed $POLICY_NAME; workspace egress is back to default-deny"
+{{- end }}

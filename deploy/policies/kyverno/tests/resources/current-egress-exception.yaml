@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: current-egress-exception
+  namespace: tenant-a
+  labels:
+    platform.ai/egress-governed: "true"
+  annotations:
+    platform.ai/egress-expires-on: "2099-12-31"
+    platform.ai/egress-catalog-refs: customer-git-artifact-mirror-example
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 203.0.113.0/24
+      ports:
+        - protocol: TCP
+          port: 443

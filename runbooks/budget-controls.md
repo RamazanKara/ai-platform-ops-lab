@@ -10,7 +10,16 @@ The inference gateway can enforce three budget ceilings per `X-Sandbox-ID`:
 - cumulative prompt characters
 - cumulative estimated tokens
 
-Estimated tokens are calculated as `ceil(prompt characters / estimatedCharsPerToken) + requested max_tokens`. If the caller omits `max_tokens`, the gateway uses the configured `admission.maxCompletionTokens` ceiling for the estimate.
+Estimated tokens are reserved at admission as `ceil(prompt characters / estimatedCharsPerToken) + requested max_tokens`. If the caller omits `max_tokens`, the gateway uses the configured `admission.maxCompletionTokens` ceiling for the estimate.
+
+That reservation is the worst case the request could cost, because admission has to charge before the model runs. Once the runtime reports what the call actually consumed, the gateway **settles** the reservation: the estimate is replaced by the measured total, and the difference is returned to the window. This matters most for exactly the traffic this platform exists for, since a coding agent typically asks for a large `max_tokens` and emits a fraction of it; without settlement it would be metered as if it had emitted all of it and hit the window limit long before its real spend justified it.
+
+Settlement runs on the streaming and non-streaming paths alike, and the correction is recorded on the request's audit receipt as `budget_settlement` (reserved, actual, refunded, overrun, settled). Two behaviors are deliberate:
+
+- A runtime that reports **no usage** leaves the reservation standing rather than refunding it, so a request that burned runtime capacity and then failed late is still charged.
+- A settlement that fails never fails a request that already succeeded. The response is committed, and an unsettled reservation can only over-charge, never hand out free budget.
+
+`estimatedCharsPerToken` is calibrated per model in [the model catalog](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/platform/model-catalog/models.yaml) and carried into the routing policy, because one global divisor is wrong in opposite directions for different models: prose in a Latin script runs near four characters per token, source code nearer three, and non-Latin scripts closer to one. A model that declares none falls back to the gateway default.
 
 The gateway supports two budget backends. `memory` stores usage in the gateway process and is useful for unit tests or single-pod development. `redis` stores usage in a Redis-compatible service and is the default for local and customer values because it works across multiple gateway replicas.
 

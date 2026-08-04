@@ -1,6 +1,6 @@
 # Scope and non-goals
 
-This page defines the boundary of release `v0.27.1`. For per-feature defaults, use the [feature inventory](feature-inventory.md).
+This page defines the boundary of release `v0.28.0`. For per-feature defaults, use the [feature inventory](feature-inventory.md).
 
 ## In scope
 

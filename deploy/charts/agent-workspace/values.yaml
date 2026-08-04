@@ -99,8 +99,23 @@ networkPolicy:
     namespace: rag
     port: 8080
   allowedEgressCidrs: []
+  # Every entry needs catalogRef and expiresOn; both are required at render time. The
+  # expiry must match the catalogRef's expiresOn in platform/network/egress-catalog.yaml.
   # Example:
   # allowedEgressCidrs:
   #   - catalogRef: customer-git-artifact-mirror-example
   #     cidr: 203.0.113.0/24
   #     ports: [443]
+  #     expiresOn: "2027-05-31"
+  expiryEnforcement:
+    # Retires an approved-egress policy in the cluster once its catalog entry expires,
+    # so the exception stops allowing traffic on schedule rather than at the next pull
+    # request. Without this, expiresOn only fails CI: the already-applied NetworkPolicy
+    # keeps working until somebody edits the repository.
+    enabled: true
+    schedule: "17 3 * * *"
+    # Report-only by default. Deleting a NetworkPolicy is a real availability event for
+    # whatever depended on that egress, so switching to enforcement is a decision the
+    # operator makes once alerting on the report is in place.
+    removeExpired: false
+    image: docker.io/bitnami/kubectl:1.34.1

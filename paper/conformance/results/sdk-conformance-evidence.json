@@ -1,0 +1,115 @@
+{
+  "openai_version": "2.16.0",
+  "anthropic_version": "0.75.0",
+  "python": "3.12.3",
+  "checks": [
+    {
+      "check": "openai_chat_completion",
+      "passed": true,
+      "detail": {
+        "content_chars": 27,
+        "total_tokens": 18
+      }
+    },
+    {
+      "check": "openai_chat_streaming",
+      "passed": true,
+      "detail": {
+        "streamed_chars": 28
+      }
+    },
+    {
+      "check": "openai_chat_streaming_usage",
+      "passed": true,
+      "detail": {
+        "total_tokens": 18
+      }
+    },
+    {
+      "check": "openai_completions",
+      "passed": true,
+      "detail": {
+        "text_chars": 27
+      }
+    },
+    {
+      "check": "openai_embeddings",
+      "passed": true,
+      "detail": {
+        "vectors": 2,
+        "dimensions": 3
+      }
+    },
+    {
+      "check": "openai_models_list",
+      "passed": true,
+      "detail": {
+        "models": 1
+      }
+    },
+    {
+      "check": "openai_error_envelope",
+      "passed": true,
+      "detail": {
+        "status": 400,
+        "code": "model_not_allowed"
+      }
+    },
+    {
+      "check": "openai_auth_error",
+      "passed": true,
+      "detail": {
+        "status": 401
+      }
+    },
+    {
+      "check": "openai_responses",
+      "passed": true,
+      "detail": {
+        "output_chars": 27
+      }
+    },
+    {
+      "check": "anthropic_message",
+      "passed": true,
+      "detail": {
+        "text_chars": 27,
+        "stop_reason": "end_turn",
+        "input_tokens": 11,
+        "output_tokens": 7
+      }
+    },
+    {
+      "check": "anthropic_streaming",
+      "passed": true,
+      "detail": {
+        "streamed_chars": 28,
+        "stop_reason": "end_turn",
+        "output_tokens": 7
+      }
+    },
+    {
+      "check": "anthropic_streaming_tool_use",
+      "passed": true,
+      "detail": {
+        "tool_name": "get_weather",
+        "tool_input": {
+          "city": "Berlin"
+        }
+      }
+    },
+    {
+      "check": "anthropic_error_envelope",
+      "passed": true,
+      "detail": {
+        "status": 400
+      }
+    }
+  ],
+  "summary": {
+    "total": 13,
+    "passed": 13,
+    "failed": 0
+  },
+  "experiment": "sdk-conformance"
+}

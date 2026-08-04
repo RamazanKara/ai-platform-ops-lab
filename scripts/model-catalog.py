@@ -90,6 +90,15 @@ def validate_model_entry(model_id: str, model: dict[str, Any], errors: list[str]
     for field in ("contextWindow", "maxPromptChars", "maxCompletionTokens"):
         value = model.get(field)
         require(errors, isinstance(value, int) and value > 0, f"{model_id}: {field} must be a positive integer")
+    # The budget estimate's divisor is reviewed data, not a global constant: a coding
+    # model tokenizes source at roughly three characters per token where prose runs near
+    # four, and a non-Latin script closer to one. Bounded to catch a transposed digit.
+    chars_per_token = model.get("estimatedCharsPerToken")
+    require(
+        errors,
+        isinstance(chars_per_token, int) and not isinstance(chars_per_token, bool) and 1 <= chars_per_token <= 16,
+        f"{model_id}: estimatedCharsPerToken must be an integer between 1 and 16",
+    )
     request_path = model.get("promotionRequest")
     if status == "approved":
         require(errors, bool(request_path), f"{model_id}: approved models must reference promotionRequest")
@@ -135,13 +144,22 @@ def validate_allowlists(models: dict[str, dict[str, Any]], errors: list[str]) ->
     return allowlists
 
 
-def routing_models_for_allowlist(models: dict[str, dict[str, Any]], allowlist: list[str]) -> list[dict[str, str]]:
-    routing: list[dict[str, str]] = []
+def routing_models_for_allowlist(models: dict[str, dict[str, Any]], allowlist: list[str]) -> list[dict[str, Any]]:
+    routing: list[dict[str, Any]] = []
     for model_id in allowlist:
         model = models.get(model_id)
         if not model:
             continue
-        routing.append({"id": model_id, "backend": str(model.get("runtime"))})
+        # estimatedCharsPerToken is carried through so the divisor the gateway meters with
+        # is provably the one the catalog reviewed, rather than a number that drifted in a
+        # values file where nobody would notice it.
+        routing.append(
+            {
+                "id": model_id,
+                "backend": str(model.get("runtime")),
+                "estimatedCharsPerToken": model.get("estimatedCharsPerToken"),
+            }
+        )
     return routing
 
 

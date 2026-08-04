@@ -24,6 +24,11 @@ class EgressReference:
     cidr: str
     ports: list[int]
     catalog_ref: str
+    # The expiry the reference itself declares. It must be present and must agree with the
+    # catalog entry, because this is the value the chart stamps onto the rendered
+    # NetworkPolicy and the cluster acts on. A reference that silently disagreed with the
+    # catalog would let an exception outlive its review inside the cluster.
+    expires_on: str = ""
 
 
 @dataclass(frozen=True)
@@ -143,6 +148,7 @@ def tenant_onboarding_references(path: Path) -> list[EgressReference]:
                     cidr=str(item.get("cidr", "")),
                     ports=normalize_ports(item.get("ports")),
                     catalog_ref=str(item.get("catalogRef", "")),
+                    expires_on=str(item.get("expiresOn", "")),
                 )
             )
     return refs
@@ -161,6 +167,7 @@ def agent_values_references(path: Path) -> list[EgressReference]:
                     cidr=str(item.get("cidr", "")),
                     ports=normalize_ports(item.get("ports")),
                     catalog_ref=str(item.get("catalogRef", "")),
+                    expires_on=str(item.get("expiresOn", "")),
                 )
             )
     return refs
@@ -192,6 +199,12 @@ def validate_references(entries: dict[str, dict[str, Any]], refs: list[EgressRef
         expires_on = entry.get("expiresOn")
         if expires_on:
             require(errors, date.fromisoformat(str(expires_on)) >= datetime.now(UTC).date(), f"{source}: catalogRef {ref.catalog_ref} is expired")
+        # The reference must carry the expiry too, and it must match. Only the reference's
+        # copy reaches the cluster (the chart renders it onto the NetworkPolicy), so a
+        # missing or stale one is an exception that outlives its review where it matters.
+        require(errors, bool(ref.expires_on), f"{source}: expiresOn is required and must match catalogRef {ref.catalog_ref}")
+        if ref.expires_on and expires_on:
+            require(errors, ref.expires_on == str(expires_on), f"{source}: expiresOn {ref.expires_on} does not match catalogRef {ref.catalog_ref} expiresOn {expires_on}")
         if network:
             normalized = (str(network), tuple(sorted(ref.ports)))
             require(errors, normalized in catalog_destinations(entry), f"{source}: CIDR and ports are not listed in catalogRef {ref.catalog_ref}")

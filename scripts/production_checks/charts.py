@@ -467,11 +467,16 @@ def check_agent_workspace_render(name: str, docs: list[dict[str, Any]], errors: 
     )
     require(errors, bool(find_kind(docs, "ServiceAccount")), f"{name}: agent workspace must render a ServiceAccount")
     service_accounts = find_kind(docs, "ServiceAccount")
-    if service_accounts:
+    # Every ServiceAccount in the workspace namespace, not just whichever one renders
+    # first: the guarantee is that no pod here gets a credential by default, and a
+    # positional check would silently stop covering the agent as soon as the chart grew
+    # another ServiceAccount. A workload that genuinely needs a token opts in per pod.
+    for service_account in service_accounts:
         require(
             errors,
-            service_accounts[0].get("automountServiceAccountToken") is False,
-            f"{name}: agent ServiceAccount must disable token automount",
+            service_account.get("automountServiceAccountToken") is False,
+            f"{name}: ServiceAccount {nested(service_account, 'metadata', 'name', default='?')} "
+            "must disable token automount",
         )
     require(errors, bool(find_kind(docs, "Role")), f"{name}: agent workspace must render namespace-scoped RBAC")
     require(errors, bool(find_kind(docs, "RoleBinding")), f"{name}: agent workspace must render a RoleBinding")

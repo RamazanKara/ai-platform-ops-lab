@@ -12,13 +12,19 @@ routing:
   policy:
     enabled: true
     models:
+      # estimatedCharsPerToken mirrors platform/model-catalog/models.yaml: the budget
+      # estimate is calibrated per model rather than sharing one global divisor, because
+      # a coding model tokenizes source far denser than the prose default assumes.
       - id: qwen3.5:0.8b
         backend: ollama
+        estimatedCharsPerToken: 4
       - id: Qwen/Qwen3-Coder-Next
         backend: vllm
+        estimatedCharsPerToken: 3
       # Governed embedding model, proxied through the gateway's /v1/embeddings route.
       - id: BAAI/bge-small-en-v1.5
         backend: vllm
+        estimatedCharsPerToken: 4
 admission:
   # Sized for a real coding-agent session against a large-context vLLM model (the
   # runtime chart serves a 262k-token context): a long multi-turn session must not hit

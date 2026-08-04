@@ -2,8 +2,8 @@ apiVersion: v2
 name: rag-service
 description: Local RAG service for agent and AI lab knowledge retrieval.
 type: application
-version: 0.27.1
-appVersion: "0.27.1"
+version: 0.28.0
+appVersion: "0.28.0"
 kubeVersion: ">=1.25.0"
 home: https://github.com/RamazanKara/private-ai-platform-kit
 sources:

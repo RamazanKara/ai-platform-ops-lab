@@ -45,7 +45,7 @@ Run `make config-contract` after changing settings, env vars, Helm values, or ch
 | `autoscaling.targetCPUUtilizationPercentage` | `70` |
 | `image.pullPolicy` | `IfNotPresent` |
 | `image.repository` | `ghcr.io/ramazankara/private-ai-platform-kit/rag-service` |
-| `image.tag` | `v0.27.1` |
+| `image.tag` | `v0.28.0` |
 | `ingestion.annotations` | `{}` |
 | `ingestion.backoffLimit` | `1` |
 | `ingestion.chunkChars` | `1200` |
@@ -129,6 +129,12 @@ Run `make config-contract` after changing settings, env vars, Helm values, or ch
 | `topologySpread.maxSkew` | `1` |
 | `topologySpread.topologyKey` | `kubernetes.io/hostname` |
 | `topologySpread.whenUnsatisfiable` | `ScheduleAnyway` |
+| `traceability.auditChainStore.backend` | `memory` |
+| `traceability.auditChainStore.key` | `rag-service:audit-chain-head` |
+| `traceability.auditChainStore.path` | `/var/lib/rag-service/audit-chain-head.json` |
+| `traceability.auditChainStore.persistIntervalSeconds` | `5` |
+| `traceability.auditChainStore.redisUrl` | `redis://budget-redis.budget.svc.cluster.local:6379/0` |
+| `traceability.auditChainStore.timeoutSeconds` | `0.5` |
 | `traceability.auditLogEnabled` | `true` |
 | `traceability.defaultSandboxId` | `local-lab` |
 <!-- chart-docs:end -->

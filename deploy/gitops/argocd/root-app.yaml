@@ -10,7 +10,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/RamazanKara/private-ai-platform-kit.git
-    targetRevision: v0.27.1
+    targetRevision: v0.28.0
     path: deploy/clusters/local
     directory:
       include: apps.yaml
