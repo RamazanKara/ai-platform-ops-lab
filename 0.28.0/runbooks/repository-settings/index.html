@@ -1232,6 +1232,23 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#why-enforce_admins-is-false" class="md-nav__link">
+    <span class="md-ellipsis">
+      Why enforce_admins is false
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -1271,6 +1288,18 @@ that failure. Record the platform limitation and remediate it at the account lev
 <p>Run the audit after renaming CI jobs because required-check context names are exact. Never run
 <code>--apply</code> against a fork or mirror without first reviewing the resolved repository printed by
 <code>gh repo view</code>.</p>
+<h2 id="why-enforce_admins-is-false">Why <code>enforce_admins</code> is false<a class="headerlink" href="#why-enforce_admins-is-false" title="Permanent link">&para;</a></h2>
+<p>The declaration sets <code>enforce_admins: false</code> deliberately. GitHub does not allow approving your
+own pull request, so <code>required_approving_review_count: 1</code> cannot be satisfied by a sole
+maintainer. With admin enforcement on, cutting a release meant temporarily deleting a
+branch-protection control and restoring it afterwards, which turns a bypass into routine
+procedure and is worse than not claiming the control.</p>
+<p>What still holds for everyone, maintainer included: all ten required status checks must pass,
+conversations must be resolved, force pushes and deletions stay blocked, and a contributor's
+pull request still needs a review. What changed is only that the maintainer can merge their own
+reviewed work without a second account.</p>
+<p>Revisit this the moment the project has more than one maintainer with write access; at that
+point the review requirement becomes satisfiable and <code>enforce_admins</code> should go back to true.</p>
 
 
 
