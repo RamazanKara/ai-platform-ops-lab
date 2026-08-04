@@ -98,6 +98,11 @@ while the cluster kept allowing the traffic.
 - Free-text fields on an agent-action receipt run through the output-guardrail redaction before
   being chained, so a credential pasted into a reported command does not come to rest in a
   permanent record.
+- `cryptography` moves to 50.0.0 for CVE-2026-69247 (HIGH), which affected both service images.
+  The release gate caught it and refused to publish, so no affected image was ever tagged or
+  released. This is a major version bump on the library PyJWT uses for RS256/ES256 signature
+  verification, so it was verified against the auth suites rather than taken on the version
+  number.
 
 ## v0.27.1 - 2026-07-18
 
