@@ -4,6 +4,101 @@ All notable changes to this project are documented in this file. The format is b
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.28.0 - 2026-08-04
+
+This release closes the distance between two things the project claimed and two it measured.
+The Anthropic surface existed but could not serve an interactive agent; the audit chain proved
+what an agent asked a model and nothing about what it then did; budgets metered the ceiling
+callers asked for rather than what they spent; and egress exceptions expired in the repository
+while the cluster kept allowing the traffic.
+
+### Added
+
+- **Streaming on `/v1/messages`.** `stream: true` now returns the Anthropic event sequence
+  (`message_start`, `content_block_start`/`delta`/`stop`, `message_delta`, `message_stop`),
+  translated from the same governed chat stream as `/v1/chat/completions` and subject to the
+  same `admission.allowStreaming` toggle. This is what an interactive Claude-style agent needs:
+  the Anthropic SDKs stream by default, so the native endpoint previously served scripts rather
+  than agents. Reasoning and thinking deltas cannot leak through it, because the translator
+  reads only `delta.content` and `delta.tool_calls`. Token counts ride on the terminal
+  `message_delta`, since OpenAI-compatible runtimes only report usage after `message_start` has
+  to be sent.
+- **Agent-action receipts (ADR 0014).** New opt-in `POST /v1/receipts`
+  (`AGENT_RECEIPTS_ENABLED`) records what a workspace did beyond calling a model, on the same
+  tamper-evident chain: `egress_denied`, `egress_allowed`, `tool_exec`, `file_write`,
+  `credential_request`, `workspace_lifecycle`. Until now `action_type` only ever had the value
+  `model_call`, so the blocked-exfiltration moment in `make agent-sandbox-demo` produced a
+  packet drop and no receipt. The vocabulary is closed, the sandbox comes from the caller's
+  bound identity so a workspace cannot write another tenant's history, and free-text fields are
+  bounded and redacted before being committed to a chain nobody can rewrite. The gateway
+  records claims and enforces nothing; the NetworkPolicy, Kyverno policy, and runtime-security
+  agent remain the controls.
+- **Tamper-evident RAG retrieval receipts.** The RAG service now carries the gateway's chain
+  primitives, so `rag_query` receipts have `chain_id`, `prev_hash`, and `record_hash` and
+  verify with the same `make audit-verify`. Retrieval decides what tenant data an agent was
+  shown and is the main path by which untrusted content reaches a model; it was previously
+  logged but not verifiable. `request_id` and `traceparent` on both chains let an auditor tie a
+  retrieval to the completion it fed.
+- **Client-SDK conformance suite.** `make sdk-conformance` boots the gateway against a mock
+  runtime and drives it with the real `openai` and `anthropic` clients, so the vendors' own
+  parsers decide whether the gateway is compatible, including streamed tool-call
+  reconstruction. The existing compatibility evidence was self-referential: an OpenAPI snapshot
+  proves the gateway did not change, not that it matches what clients expect. The SDKs install
+  into a throwaway virtualenv rather than the hash-pinned service locks.
+
+### Changed
+
+- **Budget reservations are settled against measured usage.** Admission still charges the worst
+  case before the model runs, but once the runtime reports actual usage the reservation is
+  reconciled and the difference returned to the window, atomically on both the memory and Redis
+  backends and on the streaming and non-streaming paths alike. A coding agent that requests
+  8k completion tokens and emits 200 was previously metered as if it had emitted 8k, so it hit
+  its window limit at a fraction of its real spend and `/v1/usage` reported reservations rather
+  than consumption. The correction is recorded on the audit receipt as `budget_settlement`. A
+  runtime that reports no usage leaves the reservation standing, and a failed settlement never
+  fails a request that already succeeded.
+- **Audit chains link across restarts.** Each process opens its chain with a `chain_start`
+  receipt naming the previous chain and the head it reached, turning the per-process chains
+  into a chain of their own, so a whole lifetime that was deleted no longer looks like an
+  ordinary restart. The head is persisted through a configurable store
+  (`AUDIT_CHAIN_STORE_BACKEND`: `memory`, `file`, or `redis`; `memory` is the default and keeps
+  the previous behavior), written on an interval and at shutdown so it never sits on the request
+  path. `audit-verify` walks the chain of chains and flags a truncated or rewritten
+  predecessor; a merely absent one is a note, since verifying rotated logs legitimately starts
+  mid-history (`--strict-continuity` makes it a failure).
+- **The budget token estimate is calibrated per model.** `estimatedCharsPerToken` is now
+  reviewed data in the model catalog and carried into the routing policy instead of one global
+  divisor. Prose in a Latin script runs near four characters per token, source code nearer
+  three, and non-Latin scripts closer to one, so a single constant was wrong in opposite
+  directions, and on a platform built for coding agents it under-estimated the traffic it
+  exists for. A model that declares none falls back to the gateway default.
+
+### Fixed
+
+- **Egress-catalog expiry is enforced in the cluster.** `expiresOn` is now required on every
+  `allowedEgressCidrs` entry, cross-checked against its catalog entry, and stamped onto the
+  rendered NetworkPolicy. A Kyverno rule rejects an undated exception and denies an expired one
+  (in background scan as well as at admission), and an opt-in CronJob retires a lapsed policy so
+  the workspace falls back to default-deny. Previously the check ran only at review time, so an
+  exception expired in CI while the applied NetworkPolicy kept allowing the traffic.
+- **A fast restart no longer corrupts chain grouping.** `chain_id` was `HOSTNAME:unix_seconds`,
+  so a pod restarting twice inside one second minted the same id twice and the verifier spliced
+  two unrelated chains into one and reported the seam as tampering. It now carries a random
+  suffix. Found by the continuity tests added in this release.
+
+### Security
+
+- The agent-workspace production check now requires **every** ServiceAccount in the namespace to
+  disable token automount, not just whichever one rendered first. The positional check would
+  have silently stopped covering the agent as soon as the chart grew a second ServiceAccount,
+  which this release did.
+- The egress-expiry job is granted `delete` on NetworkPolicies only when enforcement is actually
+  enabled, so the capability is not held permanently against the day it might be used, and it is
+  scoped by `resourceName` to the single policy it may retire.
+- Free-text fields on an agent-action receipt run through the output-guardrail redaction before
+  being chained, so a credential pasted into a reported command does not come to rest in a
+  permanent record.
+
 ## v0.27.1 - 2026-07-18
 
 ### Changed

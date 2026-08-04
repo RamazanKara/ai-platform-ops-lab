@@ -128,7 +128,7 @@ The customer path assumes an existing cluster and Argo CD installation. Work in 
 ```bash
 make customer-overlay \
   CUSTOMER_REPO_URL=https://github.com/<customer>/<repo>.git \
-  CUSTOMER_REVISION=v0.27.1 \
+  CUSTOMER_REVISION=v0.28.0 \
   CUSTOMER_GPU_PROFILE=nvidia
 ```
 

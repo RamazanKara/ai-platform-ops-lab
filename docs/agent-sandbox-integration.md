@@ -2,7 +2,7 @@
 
 Agent workspaces run as `agents.x-k8s.io/v1beta1` `Sandbox` resources managed by the
 vendored `kubernetes-sigs/agent-sandbox` controller. This is the only workspace runtime in
-release `v0.27.1`.
+release `v0.28.0`.
 
 The decisions are recorded in [ADR 0009](adr/0009-adopt-agent-sandbox-workspace-runtime.md)
 and [ADR 0010](adr/0010-agent-sandbox-standard-runtime.md). This page describes the current
