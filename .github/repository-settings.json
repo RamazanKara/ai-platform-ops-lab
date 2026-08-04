@@ -46,7 +46,8 @@
     "required_approving_review_count": 1,
     "dismiss_stale_reviews": true,
     "require_conversation_resolution": true,
-    "enforce_admins": true,
+    "_enforce_admins_note": "False by design. GitHub blocks approving your own pull request, so required_approving_review_count with a sole maintainer is unsatisfiable; with enforce_admins on, every release required temporarily disabling a branch-protection control, which made the bypass routine. Review stays required for contributors; the maintainer can self-merge. Required status checks still gate every merge for everyone.",
+    "enforce_admins": false,
     "allow_force_pushes": false,
     "allow_deletions": false
   },
