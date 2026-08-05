@@ -19,7 +19,7 @@ PYTHON := src/inference-gateway/.venv/bin/python
 export PATH := $(TOOLCHAIN_BIN_DIR):$(PATH)
 export PYTHONDONTWRITEBYTECODE
 
-.PHONY: help clean clean-all python-env bootstrap quickstart status local-up local-down bootstrap-argocd sync smoke rag-smoke trace-smoke tenant-up tenant-smoke tenant-onboard tenant-onboard-regulated tenant-onboard-gpu tenant-offboard customer-overlay customer-overlay-check agent-smoke chaos-drill eval eval-local rag-eval rag-eval-check loadtest loadtest-local benchmark-local docs-install docs-serve docs-build restore-drill backup-drill evidence release-gate release-gate-strict release-report release-report-strict slo-check slo-report quota-check quota-report egress-check egress-report retention-check retention-report model-check model-report model-provenance-check model-provenance-report model-provenance-verify image-scan supply-chain-check repo-security-scan dependency-lock-check repo-hygiene chart-docs chart-docs-update api-contract api-contract-update config-contract config-contract-update toolchain-install toolchain-doctor toolchain-report policy-test sdk-conformance production-check validate validate-full test-gateway test-rag fuzz lint format format-check typecheck quality coverage dashboard-check dashboard-update paths paths-check audit-verify audit-verify-demo audit-anchor
+.PHONY: help clean clean-all python-env bootstrap quickstart status local-up local-down bootstrap-argocd sync smoke rag-smoke trace-smoke tenant-up tenant-smoke tenant-onboard tenant-onboard-regulated tenant-onboard-gpu tenant-offboard customer-overlay customer-overlay-check agent-smoke chaos-drill eval eval-local rag-eval rag-eval-check loadtest loadtest-local benchmark-local docs-install docs-serve docs-build restore-drill backup-drill evidence release-gate release-gate-strict release-report release-report-strict slo-check slo-report quota-check quota-report egress-check egress-report retention-check retention-report model-check model-report model-provenance-check model-provenance-report model-provenance-verify image-scan supply-chain-check repo-security-scan dependency-lock-check repo-hygiene chart-docs chart-docs-update api-contract api-contract-update config-contract config-contract-update toolchain-install toolchain-doctor toolchain-report policy-test sdk-conformance production-check validate validate-full test test-gateway test-rag fuzz lint format format-check typecheck quality coverage dashboard-check dashboard-update paths paths-check audit-verify audit-verify-demo audit-anchor
 
 help:
 	@printf '%s\n' \
@@ -48,6 +48,7 @@ help:
 		'  make lint                  Ruff lint services and scripts' \
 		'  make format                Apply Ruff format and autofixes' \
 		'  make typecheck             Run mypy on both services' \
+		'  make test                  Run both service test suites' \
 		'  make coverage              Report test coverage with enforced floors' \
 		'  make fuzz                  Mutate security-critical parser inputs' \
 		'  make production-check      Run static production-readiness checks' \
@@ -340,6 +341,8 @@ validate:
 validate-full: python-env
 	$(PYTHON) scripts/toolchain-doctor.py --profile strict --check
 	REQUIRE_FULL_TOOLCHAIN=1 ./scripts/validate.sh
+
+test: test-gateway test-rag
 
 test-gateway:
 	./scripts/test-gateway.sh

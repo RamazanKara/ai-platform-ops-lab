@@ -8,7 +8,8 @@ shape (output[].content[].output_text / usage.input_tokens/output_tokens), promp
 modes, auth/tenant binding, streaming rejection, and the stateless-subset rejection of
 store / previous_response_id. Plus direct unit tests of the responses.py pure functions.
 
-The small runtime fake and JWT helpers stay local so this endpoint suite can run by itself.
+The runtime fake is the shared tests.gateway_support one; the JWT helpers stay local
+because this suite exercises tenant binding with its own key shapes.
 """
 
 import base64
@@ -24,31 +25,7 @@ from app.main import create_app
 from app.settings import Settings
 from fastapi.testclient import TestClient
 
-
-class FakeRuntimeClient:
-    """Records the payload forwarded to the runtime and returns a canned response."""
-
-    def __init__(self, response=None, error=None):
-        self.response = response
-        self.error = error
-        self.payload = None
-        self.headers = None
-        self.backend = None
-        self.calls = 0
-
-    async def chat_completions(self, payload, headers=None, backend=None):
-        self.calls += 1
-        self.payload = payload
-        self.headers = headers or {}
-        self.backend = backend
-        if self.error:
-            raise self.error
-        return self.response
-
-    async def health(self, backend=None):
-        if self.error:
-            raise self.error
-        return {"status": "ok", "backend": backend}
+from tests.gateway_support import FakeRuntimeClient
 
 
 def _tool_settings(**overrides):
