@@ -1391,9 +1391,9 @@ Python client is built separately and published with PyPI Trusted Publishing, an
 documentation is retained by <code>mike</code>.</p>
 <h2 id="helm-oci">Helm OCI<a class="headerlink" href="#helm-oci" title="Permanent link">&para;</a></h2>
 <p>The umbrella chart is the recommended public entry point:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>helm<span class="w"> </span>pull<span class="w"> </span>oci://ghcr.io/ramazankara/private-ai-platform-kit/charts/platform<span class="w"> </span>--version<span class="w"> </span><span class="m">0</span>.28.0
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>helm<span class="w"> </span>pull<span class="w"> </span>oci://ghcr.io/ramazankara/private-ai-platform-kit/charts/platform<span class="w"> </span>--version<span class="w"> </span><span class="m">0</span>.28.1
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>helm<span class="w"> </span>install<span class="w"> </span>private-ai<span class="w"> </span>oci://ghcr.io/ramazankara/private-ai-platform-kit/charts/platform<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span>--version<span class="w"> </span><span class="m">0</span>.28.0<span class="w"> </span>--namespace<span class="w"> </span>ai-platform<span class="w"> </span>--create-namespace
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span>--version<span class="w"> </span><span class="m">0</span>.28.1<span class="w"> </span>--namespace<span class="w"> </span>ai-platform<span class="w"> </span>--create-namespace
 </code></pre></div>
 <p>Release CI publishes <code>artifacthub-repo.yml</code> to the chart repository's special
 <code>artifacthub.io</code> OCI tag. To finish discoverability, a maintainer must register
@@ -1401,7 +1401,7 @@ documentation is retained by <code>mike</code>.</p>
 control panel, copy the assigned <code>repositoryID</code> into <code>artifacthub-repo.yml</code>, and cut the next
 release. This external registration cannot be completed from repository code.</p>
 <h2 id="python-package">Python package<a class="headerlink" href="#python-package" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>private-ai-platform-kit-client<span class="o">==</span><span class="m">0</span>.28.0
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>private-ai-platform-kit-client<span class="o">==</span><span class="m">0</span>.28.1
 </code></pre></div>
 <p>Before the first publish, register a pending PyPI Trusted Publisher with owner
 <code>RamazanKara</code>, repository <code>private-ai-platform-kit</code>, workflow <code>ci.yml</code>, environment <code>pypi</code>,

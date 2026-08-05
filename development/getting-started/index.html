@@ -1537,7 +1537,7 @@
 <p>The customer path assumes an existing cluster and Argo CD installation. Work in the customer fork or deployment branch because the configurator edits tracked manifests:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>make<span class="w"> </span>customer-overlay<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span><span class="nv">CUSTOMER_REPO_URL</span><span class="o">=</span>https://github.com/&lt;customer&gt;/&lt;repo&gt;.git<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span><span class="nv">CUSTOMER_REVISION</span><span class="o">=</span>v0.28.0<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span><span class="nv">CUSTOMER_REVISION</span><span class="o">=</span>v0.28.1<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span><span class="nv">CUSTOMER_GPU_PROFILE</span><span class="o">=</span>nvidia
 </code></pre></div>
 <p>Use <code>CUSTOMER_GPU_PROFILE=amd</code> for the AMD values or <code>default</code> for the base vLLM values. Then review the diff and run:</p>
