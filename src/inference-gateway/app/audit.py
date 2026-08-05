@@ -16,17 +16,21 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import tempfile
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from time import time
 from typing import Any, Protocol
 
-from fastapi import Request
+from fastapi import FastAPI, Request
 
+from app.metrics import AUDIT_CHAIN_PERSIST
 from app.settings import Settings, message_prompt_chars
 
 AUDIT_GENESIS = hashlib.sha256(b"genesis").hexdigest()
+AUDIT_LOGGER = logging.getLogger("ai_platform_ops_lab.audit")
 
 
 def chain_audit_event(request: Request, event: dict[str, Any]) -> None:
@@ -175,6 +179,123 @@ def build_chain_store(settings: Settings) -> ChainStore:
     if settings.audit_chain_store_backend == "redis":
         return RedisChainStore(settings)
     return MemoryChainStore()
+
+
+def emit_audit_record(event: dict[str, Any]) -> None:
+    """Write one already-chained receipt to the audit logger and the operator log.
+
+    Deliberately double-logged: the byte-identical second copy on ``uvicorn.error`` is
+    what lets the verifier detect a tampered duplicate whose ``record_hash`` was left
+    intact (see ``scripts/audit-verify.py``'s divergent-duplicates check).
+    """
+    line = json.dumps(event, sort_keys=True)
+    AUDIT_LOGGER.info(line)
+    logging.getLogger("uvicorn.error").info(line)
+
+
+def write_audit_log(
+    settings: Settings,
+    request: Request,
+    payload: dict[str, Any],
+    status_code: int,
+    latency_seconds: float,
+    backend: str,
+    runtime_response: dict[str, Any] | None = None,
+    runtime_status_code: int | None = None,
+    error: str | None = None,
+) -> None:
+    """Chain and emit the redacted model-call receipt for one governed request."""
+    if not settings.audit_log_enabled:
+        return
+    # Agent-action receipt semantics (ADR 0009): every sandbox-bound request is an
+    # action with an explicit decision, so the chain doubles as a receipt stream.
+    # Denials (admission, budget, guardrail block) carry decision=denied with the
+    # reason in `error`; the guardrail outcome is recorded even when allowed.
+    event = {
+        "event": "inference_request",
+        # Per-process chain identity (hash-covered): lets the verifier group records into
+        # independent per-replica chains and anchor each head. Pre-v0.23.0 events lack it.
+        "chain_id": getattr(request.app.state, "audit_chain_id", None),
+        "action_type": "model_call",
+        "decision": "allowed" if status_code < 400 else "denied",
+        "guardrail_action": getattr(request.state, "output_guardrail_action", None),
+        "prompt_guardrail_action": getattr(request.state, "prompt_guardrail_action", None),
+        "request_id": request.state.request_id,
+        "traceparent": request.state.traceparent,
+        "sandbox_id": request.state.sandbox_id,
+        "principal": getattr(request.state, "principal", None),
+        "backend": backend,
+        "model": payload.get("model") or settings.model_id,
+        "status_code": status_code,
+        "runtime_status_code": runtime_status_code,
+        "latency_ms": round(latency_seconds * 1000, 2),
+        # Chain-covered wall-clock timestamp: keeping WHEN inside the hash chain means
+        # rewriting event times is as detectable as rewriting the events themselves.
+        "ts": time(),
+        "usage": (runtime_response or {}).get("usage"),
+        "error": error,
+        "budget": getattr(request.state, "budget_reservation", None),
+        # What the reservation was corrected to once the runtime reported real usage.
+        # Absent when the runtime reported no usage, so a receipt never implies a
+        # reconciliation that did not happen.
+        "budget_settlement": getattr(request.state, "budget_settlement", None),
+    }
+    event.update(payload_fingerprint(payload))
+    chain_audit_event(request, event)
+    emit_audit_record(event)
+
+
+def persist_audit_head(app: FastAPI) -> None:
+    """Write the current chain head to the durable store, best effort.
+
+    A head that cannot be persisted costs continuity for the *next* process, not this
+    one, so a failure is counted and logged rather than raised: refusing to serve because
+    a head store is unreachable would trade an evidentiary nicety for an outage.
+    """
+    state = app.state
+    if state.audit_chain_count == getattr(state, "audit_head_persisted_count", None):
+        return
+    try:
+        state.chain_store.save(
+            ChainHead(
+                chain_id=state.audit_chain_id,
+                head=state.audit_prev_hash,
+                count=state.audit_chain_count,
+            )
+        )
+    except Exception:
+        AUDIT_CHAIN_PERSIST.labels("error").inc()
+        logging.getLogger("uvicorn.error").exception("audit chain head could not be persisted")
+        return
+    state.audit_head_persisted_count = state.audit_chain_count
+    AUDIT_CHAIN_PERSIST.labels("ok").inc()
+
+
+def open_audit_chain(app: FastAPI) -> dict[str, Any]:
+    """Open this process's chain with a ``chain_start`` receipt naming its predecessor.
+
+    This is the record that turns a set of independent per-process chains into a chain of
+    chains. It is hash-linked like any other receipt, so the claim it makes about the
+    previous chain's head is itself covered by the chain it opens, and a lifetime that was
+    deleted wholesale leaves a successor pointing at a predecessor that is not there.
+    """
+    state = app.state
+    try:
+        previous = state.chain_store.load()
+    except Exception:
+        # An unreadable head store must not stop the gateway from serving; the chain
+        # simply starts without a predecessor, which the record states plainly.
+        logging.getLogger("uvicorn.error").exception("audit chain head could not be read")
+        previous = None
+    event = chain_start_event(state.audit_chain_id, previous)
+    event["ts"] = time()
+    event["prev_hash"], event["record_hash"] = advance_chain(AUDIT_GENESIS, event)
+    state.audit_prev_hash = event["record_hash"]
+    state.audit_chain_count = 1
+    if state.settings.audit_log_enabled:
+        emit_audit_record(event)
+    persist_audit_head(app)
+    return event
 
 
 def chain_start_event(chain_id: str, previous: ChainHead | None) -> dict[str, Any]:
