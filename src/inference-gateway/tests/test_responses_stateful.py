@@ -11,20 +11,7 @@ from app.main import create_app
 from app.settings import Settings
 from fastapi.testclient import TestClient
 
-
-class FakeRuntimeClient:
-    def __init__(self, response=None):
-        self.response = response
-        self.payload = None
-        self.calls = 0
-
-    async def chat_completions(self, payload, headers=None, backend=None):
-        self.calls += 1
-        self.payload = payload
-        return self.response
-
-    async def health(self, backend=None):
-        return {"status": "ok", "backend": backend}
+from tests.gateway_support import FakeRuntimeClient
 
 
 def _chat_response(text="reply"):

@@ -6,36 +6,10 @@ from app.main import create_app
 from app.settings import Settings
 from fastapi.testclient import TestClient
 
+from tests.gateway_support import FakeRuntimeClient
+
 GITHUB_TOKEN = "ghp_" + "a" * 30
 US_SSN = "123-45-6789"
-
-
-class FakeRuntimeClient:
-    """Minimal runtime client returning a fixed response or streaming fixed chunks."""
-
-    def __init__(self, response=None, stream_chunks=None):
-        self.response = response
-        self.stream_chunks = stream_chunks or [b'data: {"choices":[]}\n\n']
-        self.calls = 0
-
-    async def chat_completions(self, payload, headers=None, backend=None):
-        self.calls += 1
-        return self.response
-
-    async def stream_chat_completions(self, payload, headers=None, backend=None):
-        self.calls += 1
-        for chunk in self.stream_chunks:
-            yield chunk
-
-    async def embeddings(self, payload, headers=None, backend=None):
-        self.calls += 1
-        return self.response
-
-    async def health(self, backend=None):
-        return {"status": "ok", "backend": backend}
-
-    async def aclose(self):
-        return None
 
 
 class FakeRedis:

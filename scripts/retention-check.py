@@ -81,7 +81,6 @@ def check_audit_redaction(policy: dict[str, Any], errors: list[str]) -> None:
         errors, audit.get("storesRawCompletion") is False, "audit retention policy must disallow raw completion storage"
     )
     require(errors, audit.get("storesRawQuery") is False, "audit retention policy must disallow raw query storage")
-    gateway = (ROOT / "src/inference-gateway/app/main.py").read_text()
     gateway_audit = (ROOT / "src/inference-gateway/app/audit.py").read_text()
     rag = (ROOT / "src/rag-service/app/main.py").read_text()
     require(
@@ -95,7 +94,11 @@ def check_audit_redaction(policy: dict[str, Any], errors: list[str]) -> None:
         "gateway audit logs must derive prompt fingerprints from canonical messages",
     )
     require(errors, "query_sha256" in rag and "query_chars" in rag, "RAG audit logs must keep query hashes and lengths")
-    gateway_event = gateway.split("event = {", 1)[1].split("event.update", 1)[0] if "event = {" in gateway else ""
+    # The receipt construction lives in app/audit.py (write_audit_log) since the route
+    # split; main.py is app assembly and no longer builds the event.
+    gateway_event = (
+        gateway_audit.split("event = {", 1)[1].split("event.update", 1)[0] if "event = {" in gateway_audit else ""
+    )
     rag_event = (
         rag.split("event: dict[str, Any] = {", 1)[1].split("if query is not None:", 1)[0]
         if "event: dict[str, Any] = {" in rag

@@ -10,10 +10,18 @@ from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
 
 
 class FakeRuntimeClient:
-    def __init__(self, response=None, error=None):
+    """The one canned runtime client every gateway test uses.
+
+    Records the payload/headers/backend it was last called with, returns ``response`` (or
+    raises ``error``), and streams ``stream_chunks``. Endpoint suites used to carry
+    private near-copies of this class; suites needing genuinely different behavior (for
+    example a fake that *refuses* the non-streaming path) still define their own.
+    """
+
+    def __init__(self, response=None, error=None, stream_chunks=None):
         self.response = response
         self.error = error
-        self.stream_chunks = [b'data: {"choices":[]}\n\n']
+        self.stream_chunks = stream_chunks or [b'data: {"choices":[]}\n\n']
         self.payload = None
         self.headers = None
         self.backend = None
