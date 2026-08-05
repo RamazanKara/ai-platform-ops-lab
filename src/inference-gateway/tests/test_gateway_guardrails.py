@@ -3,8 +3,10 @@ import logging
 import types
 
 import pytest
-from app import main as gateway_main
+from app.audit import payload_fingerprint
 from app.main import create_app
+from app.request_context import _request_id_from_header
+from app.streaming import _rewrite_stream_segment
 from fastapi.testclient import TestClient
 
 from tests.gateway_support import (
@@ -19,7 +21,7 @@ def test_request_id_rejects_control_characters():
     fake_request = types.SimpleNamespace(headers={"x-request-id": "bad\x01id"})
 
     with pytest.raises(ValueError, match="visible ASCII"):
-        gateway_main._request_id_from_header(fake_request)
+        _request_id_from_header(fake_request)
 
 
 # --- Phase 1: enforcement-hole regressions ---------------------------------
@@ -247,7 +249,7 @@ def test_batch_receipt_emitted_to_uvicorn_logger(caplog):
 def test_rewrite_stream_segment_passes_plain_deltas_through_byte_identical():
     # The hot path (ordinary token deltas) must not be altered or re-serialized.
     segment = b'data: {"choices":[{"delta":{"content":"tok"}}]}\n\n'
-    assert gateway_main._rewrite_stream_segment(segment, drop_usage_only=True, strip_reasoning=True) == segment
+    assert _rewrite_stream_segment(segment, drop_usage_only=True, strip_reasoning=True) == segment
 
 
 # --- Phase 2: prompt-secret modes and cloud key patterns -------------------
@@ -400,8 +402,8 @@ def test_payload_fingerprint_changes_when_only_tool_arguments_change():
     changed = json.loads(json.dumps(base))
     changed["messages"][0]["tool_calls"][0]["function"]["arguments"] = '{"tenant":"other"}'
 
-    first = gateway_main._payload_fingerprint(base)
-    second = gateway_main._payload_fingerprint(changed)
+    first = payload_fingerprint(base)
+    second = payload_fingerprint(changed)
 
     assert first["prompt_sha256"] != second["prompt_sha256"]
     assert first["request_sha256"] != second["request_sha256"]
@@ -522,7 +524,7 @@ def test_both_completion_fields_are_capped():
 
 def test_rewrite_stream_segment_drops_usage_event_without_stray_blank():
     segment = b'data: {"choices":[{"delta":{"content":"hi"}}]}\n\ndata: {"choices":[],"usage":{"total_tokens":3}}\n\n'
-    out = gateway_main._rewrite_stream_segment(segment, drop_usage_only=True, strip_reasoning=True)
+    out = _rewrite_stream_segment(segment, drop_usage_only=True, strip_reasoning=True)
     assert b'"usage"' not in out
     assert b"hi" in out
     # Removing the usage event must not leave a triple-newline artifact.

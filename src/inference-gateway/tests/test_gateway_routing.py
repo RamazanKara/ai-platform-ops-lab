@@ -1,12 +1,14 @@
 import json
 import logging
 
+import app.streaming
 import httpx
-from app import main as gateway_main
+from app import inference_api
 from app.main import create_app
 from app.policy import ModelRoute, ModelRoutingPolicy
 from app.runtime_client import sanitize_chat_completion
 from app.settings import Settings
+from app.streaming import _usage_from_sse_chunk
 from fastapi.testclient import TestClient
 
 from tests.gateway_support import (
@@ -199,7 +201,7 @@ def test_shadow_request_is_scheduled(monkeypatch):
     def fake_schedule(client, shadow_route, payload, request):
         captured["shadow_model"] = shadow_route.model_id
 
-    monkeypatch.setattr(gateway_main, "_schedule_shadow", fake_schedule)
+    monkeypatch.setattr(inference_api, "_schedule_shadow", fake_schedule)
     app = create_app(_tool_settings())
     app.state.model_routing_policy = ModelRoutingPolicy(
         routes=(
@@ -534,15 +536,15 @@ def test_usage_from_sse_chunk_skips_parsing_delta_chunks_without_usage(monkeypat
     def _fail(*args, **kwargs):
         raise AssertionError("chunks without a usage member must not be JSON-parsed")
 
-    monkeypatch.setattr(gateway_main.json, "loads", _fail)
+    monkeypatch.setattr(app.streaming.json, "loads", _fail)
 
     chunk = b'data: {"choices":[{"delta":{"content":"hel"}}]}\n\ndata: [DONE]\n\n'
-    assert gateway_main._usage_from_sse_chunk(chunk) is None
+    assert _usage_from_sse_chunk(chunk) is None
 
 
 def test_usage_from_sse_chunk_extracts_terminal_usage_object():
     chunk = b'data: {"choices":[],"usage":{"prompt_tokens":7,"completion_tokens":3,"total_tokens":10}}\n\n'
-    assert gateway_main._usage_from_sse_chunk(chunk) == {
+    assert _usage_from_sse_chunk(chunk) == {
         "prompt_tokens": 7,
         "completion_tokens": 3,
         "total_tokens": 10,
@@ -553,7 +555,7 @@ def test_usage_from_sse_chunk_ignores_null_usage():
     # Interim events in some runtimes carry `"usage": null`; the literal is present,
     # so the line is parsed and rejected by the isinstance check, same as before.
     chunk = b'data: {"choices":[{"delta":{"content":"x"}}],"usage": null}\n\n'
-    assert gateway_main._usage_from_sse_chunk(chunk) is None
+    assert _usage_from_sse_chunk(chunk) is None
 
 
 def test_usage_from_sse_chunk_finds_usage_in_multi_event_chunk():
@@ -562,7 +564,7 @@ def test_usage_from_sse_chunk_finds_usage_in_multi_event_chunk():
         b'data: {"choices":[],"usage":{"total_tokens":4}}\n\n'
         b"data: [DONE]\n\n"
     )
-    assert gateway_main._usage_from_sse_chunk(chunk) == {"total_tokens": 4}
+    assert _usage_from_sse_chunk(chunk) == {"total_tokens": 4}
 
 
 def test_chat_completion_uses_default_model_when_model_is_omitted():
