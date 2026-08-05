@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-labelledby="title desc" font-family="'Segoe UI', Helvetica, Arial, sans-serif">
+  <title id="title">Private AI Platform Kit architecture</title>
+  <desc id="desc">API clients and coding agents in hardened agent-sandbox workspace pods call an inference gateway that authenticates, applies admission, budgets, and input/output guardrails, routes to Ollama or vLLM, and grounds answers with the RAG service and Qdrant. A GitOps control plane (including the agent-sandbox controller) and governance inputs configure the platform; observability and evidence flow out. The same charts run on local kind and customer-owned Kubernetes.</desc>
+
+  <defs>
+    <marker id="arrow" markerWidth="13" markerHeight="13" refX="9" refY="6" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M2,2 L11,6 L2,10 Z" fill="#334155"/>
+    </marker>
+    <marker id="arrowSoft" markerWidth="13" markerHeight="13" refX="9" refY="6" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M2,2 L11,6 L2,10 Z" fill="#7c3aed"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1280" height="720" fill="#f6f8fb"/>
+  <rect x="8" y="8" width="1264" height="704" rx="18" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/>
+
+  <text x="48" y="56" font-size="30" font-weight="800" fill="#0f172a">Private AI Platform Kit</text>
+  <text x="48" y="84" font-size="16" fill="#475569">Local-first Kubernetes for private LLMs, RAG, and isolated coding-agent workspaces</text>
+
+  <!-- Control plane band -->
+  <rect x="48" y="112" width="574" height="86" rx="14" fill="#fffbeb" stroke="#f1cf7a" stroke-width="2"/>
+  <text x="72" y="146" font-size="19" font-weight="700" fill="#0f172a">GitOps control plane</text>
+  <text x="72" y="176" font-size="15" fill="#7c5b1e">Argo CD · Helm · Kyverno · Pod Security Admission · agent-sandbox controller</text>
+
+  <rect x="646" y="112" width="586" height="86" rx="14" fill="#fffbeb" stroke="#f1cf7a" stroke-width="2"/>
+  <text x="670" y="146" font-size="19" font-weight="700" fill="#0f172a">Governance inputs</text>
+  <text x="670" y="176" font-size="15" fill="#7c5b1e">Model catalog · provenance · quotas &amp; chargeback · retention · egress catalog</text>
+
+  <!-- Clients -->
+  <text x="48" y="244" font-size="14" font-weight="700" fill="#64748b" letter-spacing="1">CLIENTS</text>
+  <rect x="48" y="256" width="228" height="92" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="72" y="294" font-size="19" font-weight="700" fill="#0f172a">API clients</text>
+  <text x="72" y="322" font-size="14" fill="#475569">OpenAI-compatible SDKs</text>
+
+  <rect x="48" y="368" width="228" height="118" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="72" y="406" font-size="19" font-weight="700" fill="#0f172a">Coding agents</text>
+  <text x="72" y="430" font-size="14" fill="#475569">Hardened agent-sandbox pod</text>
+  <text x="72" y="453" font-size="14" fill="#475569">read-only rootfs · no SA token</text>
+  <text x="72" y="476" font-size="14" fill="#475569">approved egress</text>
+
+  <!-- Gateway -->
+  <rect x="332" y="222" width="404" height="340" rx="16" fill="#eff4ff" stroke="#8fb0ee" stroke-width="2.5"/>
+  <text x="356" y="260" font-size="22" font-weight="800" fill="#1e3a8a">Inference Gateway</text>
+  <text x="356" y="286" font-size="14" fill="#3b5bdb" font-family="'Courier New', monospace">POST /v1/chat/completions</text>
+
+  <rect x="354" y="304" width="182" height="46" rx="11" fill="#dbeafe"/>
+  <text x="368" y="332" font-size="13" font-weight="600" fill="#1e3a8a">Auth · API key / JWT</text>
+  <rect x="548" y="304" width="176" height="46" rx="11" fill="#dbeafe"/>
+  <text x="562" y="332" font-size="13" font-weight="600" fill="#1e3a8a">Model routing</text>
+
+  <rect x="354" y="360" width="182" height="46" rx="11" fill="#dbeafe"/>
+  <text x="368" y="388" font-size="13" font-weight="600" fill="#1e3a8a">Admission + budgets</text>
+  <rect x="548" y="360" width="176" height="46" rx="11" fill="#dbeafe"/>
+  <text x="562" y="388" font-size="13" font-weight="600" fill="#1e3a8a">Guardrails in / out</text>
+
+  <rect x="354" y="416" width="182" height="46" rx="11" fill="#dbeafe"/>
+  <text x="368" y="444" font-size="13" font-weight="600" fill="#1e3a8a">Response cache</text>
+  <rect x="548" y="416" width="176" height="46" rx="11" fill="#dbeafe"/>
+  <text x="562" y="444" font-size="13" font-weight="600" fill="#1e3a8a">Audit · metrics · traces</text>
+
+  <text x="356" y="498" font-size="14" fill="#475569">Rate limiting · load shedding · runtime failover</text>
+  <text x="356" y="524" font-size="14" fill="#475569">Redacted audit events, no raw prompt text</text>
+
+  <!-- Runtimes + RAG -->
+  <text x="760" y="244" font-size="14" font-weight="700" fill="#64748b" letter-spacing="1">RUNTIMES &amp; RETRIEVAL</text>
+  <rect x="760" y="256" width="228" height="86" rx="14" fill="#ecfdf5" stroke="#6ec9a0" stroke-width="2"/>
+  <text x="784" y="292" font-size="19" font-weight="700" fill="#065f46">Ollama</text>
+  <text x="784" y="320" font-size="14" fill="#3f6b5c">Local kind runtime</text>
+
+  <rect x="760" y="358" width="228" height="86" rx="14" fill="#ecfdf5" stroke="#6ec9a0" stroke-width="2"/>
+  <text x="784" y="394" font-size="19" font-weight="700" fill="#065f46">vLLM</text>
+  <text x="784" y="422" font-size="14" fill="#3f6b5c">GPU · FP8 / AWQ · NVIDIA / AMD</text>
+
+  <rect x="760" y="460" width="228" height="102" rx="14" fill="#eff4ff" stroke="#8fb0ee" stroke-width="2"/>
+  <text x="784" y="496" font-size="19" font-weight="700" fill="#1e3a8a">RAG service</text>
+  <text x="784" y="522" font-size="14" fill="#475569">Hybrid retrieval + reranker</text>
+  <text x="784" y="544" font-size="14" fill="#475569">Per-tenant · Qdrant vectors</text>
+
+  <!-- Observability & evidence -->
+  <rect x="1012" y="222" width="220" height="340" rx="14" fill="#f5f3ff" stroke="#c4b5fd" stroke-width="2"/>
+  <text x="1034" y="256" font-size="18" font-weight="700" fill="#5b21b6">Observability</text>
+  <text x="1034" y="280" font-size="18" font-weight="700" fill="#5b21b6">&amp; evidence</text>
+  <text x="1034" y="316" font-size="14" fill="#4c1d95">Prometheus · Grafana</text>
+  <text x="1034" y="344" font-size="14" fill="#4c1d95">Tempo tracing</text>
+  <text x="1034" y="372" font-size="14" fill="#4c1d95">Loki logs</text>
+  <text x="1034" y="400" font-size="14" fill="#4c1d95">Tamper-evident audit</text>
+  <text x="1034" y="428" font-size="14" fill="#4c1d95">Evals + safety gate</text>
+  <text x="1034" y="456" font-size="14" fill="#4c1d95">Release gates</text>
+  <text x="1034" y="484" font-size="14" fill="#4c1d95">Cost / FinOps</text>
+  <text x="1034" y="512" font-size="14" fill="#4c1d95">Restore &amp; chaos drills</text>
+
+  <!-- Request path (solid): clients -> gateway -> runtimes / RAG -->
+  <path d="M276 302 L327 302" fill="none" stroke="#334155" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M276 427 L327 427" fill="none" stroke="#334155" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M736 299 L757 299" fill="none" stroke="#334155" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M736 401 L757 401" fill="none" stroke="#334155" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M736 511 L757 511" fill="none" stroke="#334155" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- Control &amp; evidence (dashed): control plane -> gateway; gateway -> observability (routed below the cards) -->
+  <path d="M430 198 L430 216" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-dasharray="7 6" marker-end="url(#arrowSoft)"/>
+  <path d="M700 198 L700 216" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-dasharray="7 6" marker-end="url(#arrowSoft)"/>
+  <path d="M534 562 L534 590 L1122 590 L1122 568" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-dasharray="7 6" marker-end="url(#arrowSoft)"/>
+
+  <!-- Legend -->
+  <path d="M48 612 L96 612" fill="none" stroke="#334155" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="108" y="617" font-size="14" fill="#475569">Request path</text>
+  <path d="M232 612 L280 612" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-dasharray="7 6" marker-end="url(#arrowSoft)"/>
+  <text x="292" y="617" font-size="14" fill="#475569">Control &amp; evidence</text>
+
+  <text x="48" y="676" font-size="15" fill="#334155">The same charts, policies, runbooks, and evidence checks run on local <tspan font-weight="700">kind</tspan> and carry into customer-owned Kubernetes (Ollama → vLLM / GPU).</text>
+</svg>

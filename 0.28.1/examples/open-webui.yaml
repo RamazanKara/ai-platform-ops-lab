@@ -1,0 +1,197 @@
+# Self-hosted chat UI in front of the gateway (DOCUMENTED EXAMPLE, not rendered by validate).
+#
+# The kit is API-only. This example puts a self-hosted end-user chat UI (Open WebUI, the common
+# choice) in front of the inference gateway so a human can actually type into a chat box, while
+# every request still flows through the gateway's auth, model allowlist, admission, budget, and
+# audit controls. Open WebUI points its OpenAI-compatible base URL at the gateway; it is NOT a
+# shipped or supported component.
+#
+# WHY THIS IS AN EXAMPLE, NOT A SHIPPED/RENDERED MANIFEST:
+#   - A human-facing chat UI is a separate product surface. The kit's non-goal list is explicit:
+#     "No bundled end-user chat UI": this UI is operator-owned; the kit's read-only operator console
+#     non-goal (see docs/scope-and-non-goals.md). Shipping and supporting a UI would cross the
+#     kit's "manifests, charts, service code, validation tooling, runbooks" boundary.
+#   - The image tag, storage, ingress/TLS, and human SSO wiring are all environment-specific.
+#   Rendering one "correct" manifest through kubeconform/helm would bake in choices wrong for
+#   most clusters. So this ships under docs/examples/ (which scripts/validate.sh does not
+#   kubeconform-scan) as a copy-adapt starting point. See runbooks/chat-ui.md for the procedure.
+#
+# ADAPT BEFORE APPLYING:
+#   - Pin `image:` to a digest you have scanned and mirrored (do not float `:main`).
+#   - Create the api-key Secret from a real gateway key hash-listed in auth.apiKeyHashes.
+#   - Decide the X-Sandbox-ID story (see the ConfigMap + runbook note below). Open WebUI sends
+#     one bearer token, so all its traffic lands in ONE sandbox unless you inject per-user headers.
+#   - Add an Ingress + TLS and wire human SSO (Open WebUI OIDC) to the same IdP as Grafana/Argo CD.
+#   - Replace <NAMESPACE> where the UI runs (examples use `chat-ui`).
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: chat-ui
+  labels:
+    app.kubernetes.io/part-of: private-ai-platform-kit
+    # Match the platform PSA restricted floor used by the data-plane namespaces.
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/warn: restricted
+---
+# The gateway API key the UI presents. Create it from a key whose SHA-256 is in the gateway's
+# auth.apiKeyHashes (or a key record). NEVER commit a real key; source it from your secret
+# manager via External Secrets. Placeholder value shown for shape only.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: open-webui-gateway-key
+  namespace: chat-ui
+  labels:
+    app.kubernetes.io/name: open-webui
+    app.kubernetes.io/part-of: private-ai-platform-kit
+type: Opaque
+stringData:
+  # A gateway API key (the plaintext key; its SHA-256 must be allow-listed on the gateway).
+  api-key: "REPLACE_WITH_GATEWAY_API_KEY"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: open-webui-config
+  namespace: chat-ui
+  labels:
+    app.kubernetes.io/name: open-webui
+    app.kubernetes.io/part-of: private-ai-platform-kit
+data:
+  # Point Open WebUI's OpenAI-compatible client at the gateway's /v1 base. In-cluster Service
+  # DNS for the bundled chart is inference-gateway-inference-gateway.inference.svc.
+  OPENAI_API_BASE_URL: "http://inference-gateway-inference-gateway.inference.svc.cluster.local:8080/v1"
+  # Only models the gateway allow-lists are usable; disable Open WebUI's own model management.
+  ENABLE_OLLAMA_API: "false"
+  # X-Sandbox-ID note: Open WebUI presents ONE bearer token, so without extra work all of its
+  # traffic is attributed to a single sandbox. Options, cheapest first:
+  #   (a) Accept one shared sandbox for the UI: set the gateway's DEFAULT_SANDBOX_ID (or bind the
+  #       UI's API key to a sandbox via a key record) so every UI request lands in a known,
+  #       budgeted sandbox. Simplest; correct when the UI is one team's shared workspace.
+  #   (b) Per-connection header: newer Open WebUI lets you add custom headers per OpenAI
+  #       connection, set `X-Sandbox-ID: <sandbox>` there for a fixed sandbox.
+  #   (c) Per-user sandboxes: front the gateway with a small header-stamping proxy that maps the
+  #       authenticated Open WebUI user (from its OIDC session) to an X-Sandbox-ID, so each human
+  #       is metered separately. This is the only option that gives per-user budgets/attribution.
+  # See runbooks/chat-ui.md.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: open-webui
+  namespace: chat-ui
+  labels:
+    app.kubernetes.io/name: open-webui
+    app.kubernetes.io/component: chat-ui
+    app.kubernetes.io/part-of: private-ai-platform-kit
+    platform.ai/cost-center: platform
+    platform.ai/owner: platform-team
+    platform.ai/environment: customer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: open-webui
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: open-webui
+        app.kubernetes.io/part-of: private-ai-platform-kit
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: open-webui
+          # Pin to a scanned, mirrored digest in your registry. Do not float a tag.
+          image: ghcr.io/open-webui/open-webui:REPLACE_WITH_PINNED_DIGEST
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: open-webui-config
+          env:
+            # The gateway accepts the key as a bearer token; Open WebUI sends OPENAI_API_KEY as
+            # `Authorization: Bearer <key>`, which the gateway honors (equivalent to X-API-Key).
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: open-webui-gateway-key
+                  key: api-key
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            # Open WebUI keeps its user DB / uploads under /app/backend/data; back it with a PVC
+            # in production (emptyDir here so the example applies without a StorageClass).
+            - name: data
+              mountPath: /app/backend/data
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: open-webui
+  namespace: chat-ui
+  labels:
+    app.kubernetes.io/name: open-webui
+    app.kubernetes.io/part-of: private-ai-platform-kit
+spec:
+  selector:
+    app.kubernetes.io/name: open-webui
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+# Default-deny egress for the UI namespace, then allow ONLY DNS and the gateway. This keeps a
+# compromised UI from reaching the runtimes, Redis, or the internet directly; all model traffic
+# must go through the gateway's controls. Requires a policy-capable CNI to enforce.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: open-webui-egress
+  namespace: chat-ui
+  labels:
+    app.kubernetes.io/name: open-webui
+    app.kubernetes.io/part-of: private-ai-platform-kit
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: open-webui
+  policyTypes:
+    - Egress
+  egress:
+    # DNS.
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # The inference gateway only. Label your inference namespace `kubernetes.io/metadata.name:
+    # inference` (the default namespace label) for this selector to match.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: inference
+      ports:
+        - protocol: TCP
+          port: 8080
+---
+# Ingress is intentionally omitted: TLS, hostname, and the ingress class are environment-specific,
+# and the UI must be reached over HTTPS with human SSO in front of it. Add an Ingress (or route it
+# through your gateway/mesh) and wire Open WebUI's OIDC to the same IdP as Grafana / Argo CD.
+# See runbooks/chat-ui.md and runbooks/api-access.md (Grafana/Argo CD SSO) for the pattern.

@@ -1,0 +1,1799 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="A runnable, vendor-neutral Kubernetes platform for private LLMs, RAG, and coding-agent workspaces.">
+      
+      
+      
+        <link rel="canonical" href="https://ramazankara.github.io/private-ai-platform-kit/0.28.1/production-readiness/">
+      
+      
+        <link rel="prev" href="../feature-inventory/">
+      
+      
+        <link rel="next" href="../benchmarks-and-evals/">
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.49">
+    
+    
+      
+        <title>Production readiness matrix - Private AI Platform Kit</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.6f8fc17f.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#production-readiness-matrix" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Private AI Platform Kit" class="md-header__button md-logo" aria-label="Private AI Platform Kit" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Private AI Platform Kit
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Production readiness matrix
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/RamazanKara/private-ai-platform-kit" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    RamazanKara/private-ai-platform-kit
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../tutorials/" class="md-tabs__link">
+          
+  
+    
+  
+  Tutorials
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../getting-started/" class="md-tabs__link">
+          
+  
+    
+  
+  How-to guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../feature-inventory/" class="md-tabs__link">
+          
+  
+    
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../decision-guide/" class="md-tabs__link">
+          
+  
+    
+  
+  Explanation
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Private AI Platform Kit" class="md-nav__button md-logo" aria-label="Private AI Platform Kit" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Private AI Platform Kit
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/RamazanKara/private-ai-platform-kit" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    RamazanKara/private-ai-platform-kit
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../tutorials/" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    Tutorials
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Tutorials
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    First private AI platform
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+          
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../runbooks/" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    How-to guides
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            How-to guides
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Local lab and operations
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../client-examples/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Client API examples
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../customer-handoff-example/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Customer cluster handoff
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../regulated-offline-tenant-example/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Regulated offline tenant
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../gpu-coding-agent-tenant-example/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    GPU coding-agent tenant
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Reference
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../feature-inventory/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Feature inventory
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Production readiness matrix
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Production readiness matrix
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#required-controls" class="md-nav__link">
+    <span class="md-ellipsis">
+      Required Controls
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stateful-stores-devreference-footprints-and-their-ha-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      Stateful stores: dev/reference footprints and their HA path
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#promotion-review" class="md-nav__link">
+    <span class="md-ellipsis">
+      Promotion Review
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks-and-evals/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Benchmarks and evals
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../capacity-sizing/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Capacity and sizing
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cost-model/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Cost model and TCO
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../version-matrix/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Version and compatibility matrix
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-verification/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Release verification
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../distribution/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Distribution and discovery
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../glossary/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Glossary
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../references/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Upstream references
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+          
+        
+      
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../adr/" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    Explanation
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5" id="__nav_5_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Explanation
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decision-guide/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Is this for you (decision guide)
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../faq/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    FAQ
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Architecture profiles
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../security-overview/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Security overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../threat-model/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Architecture and threat model
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../owasp-llm-top-10-mapping/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    OWASP LLM Top 10 2025
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ai-governance-crosswalk/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    AI governance crosswalk
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scope-and-non-goals/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Scope and non-goals
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agent-sandbox-integration/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Agent-sandbox integration
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../proof/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Evidence and strict validation
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#required-controls" class="md-nav__link">
+    <span class="md-ellipsis">
+      Required Controls
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stateful-stores-devreference-footprints-and-their-ha-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      Stateful stores: dev/reference footprints and their HA path
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#promotion-review" class="md-nav__link">
+    <span class="md-ellipsis">
+      Promotion Review
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+    <a href="https://github.com/RamazanKara/private-ai-platform-kit/edit/main/docs/production-readiness.md" title="Edit this page" class="md-content__button md-icon">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="production-readiness-matrix">Production Readiness Matrix<a class="headerlink" href="#production-readiness-matrix" title="Permanent link">&para;</a></h1>
+<p>This kit is local-first, but the controls are shaped like customer production controls. The local stack is the reference implementation. Customer clusters should keep the same interfaces and replace only the platform services they already operate, such as ingress, storage, secrets, logging, and GPU node pools.</p>
+<h2 id="required-controls">Required Controls<a class="headerlink" href="#required-controls" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Local lab implementation</th>
+<th>Customer cluster expectation</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Runtime isolation</td>
+<td>Ollama in <code>ollama</code>, optional vLLM in <code>vllm</code>, gateway in <code>inference</code></td>
+<td>Dedicated namespaces and runtime service accounts</td>
+<td><code>make smoke RUNTIME_BACKEND=ollama</code></td>
+</tr>
+<tr>
+<td>Accelerator portability</td>
+<td>vLLM profiles for CPU-off local lab, NVIDIA, and AMD ROCm</td>
+<td>Customer clusters expose <code>nvidia.com/gpu</code> or <code>amd.com/gpu</code></td>
+<td><code>make production-check</code></td>
+</tr>
+<tr>
+<td>Runtime high availability</td>
+<td>Gateway replicas, vLLM replicas, HPA, PDBs, and topology spread</td>
+<td>Size min/max replicas to SLOs and GPU inventory</td>
+<td><code>helm template</code> in <code>make validate</code></td>
+</tr>
+<tr>
+<td>Traceability</td>
+<td><code>X-Request-ID</code>, <code>X-Sandbox-ID</code>, optional <code>traceparent</code>, JSON audit events</td>
+<td>Forward the same headers through ingress and log pipeline</td>
+<td><code>make smoke</code>, <code>make trace-smoke</code>, gateway tests</td>
+</tr>
+<tr>
+<td>API authentication</td>
+<td>Gateway and RAG business endpoints require API keys in local/customer values</td>
+<td>Back hashes with customer secret manager and rotate keys through External Secrets</td>
+<td>gateway/RAG auth tests, <code>make smoke</code>, <code>make rag-smoke</code></td>
+</tr>
+<tr>
+<td>API contracts</td>
+<td><code>platform/api-contracts/</code> stores OpenAPI snapshots for gateway and RAG with stable operation IDs and auth declarations</td>
+<td>Review contract diffs before changing customer-facing routes, request schemas, or auth semantics</td>
+<td><code>make api-contract</code>, <code>make api-contract-update</code></td>
+</tr>
+<tr>
+<td>Configuration contracts</td>
+<td><code>platform/config-contracts/</code> stores service runtime env snapshots and checks them against Python settings, Helm templates, and chart defaults</td>
+<td>Review config diffs before changing customer overlays, secrets, budgets, retrieval settings, or runtime endpoints</td>
+<td><code>make config-contract</code>, <code>make config-contract-update</code></td>
+</tr>
+<tr>
+<td>Prompt privacy</td>
+<td>Audit logs include prompt length and SHA-256 only</td>
+<td>Do not log raw prompt text by default</td>
+<td><code>test_audit_log_redacts_prompt_content</code></td>
+</tr>
+<tr>
+<td>Data retention</td>
+<td><code>platform/governance/data-retention.yaml</code> covers audit logs, generated evidence, RAG knowledge, agent workspace data, and model governance records</td>
+<td>Align retention days and classification to customer policy</td>
+<td><code>make retention-check</code>, <code>make retention-report</code></td>
+</tr>
+<tr>
+<td>Model governance</td>
+<td>Gateway <code>ALLOWED_MODELS</code> rejects unapproved model IDs</td>
+<td>Maintain an approved model catalog per environment</td>
+<td><code>test_chat_completion_rejects_disallowed_model</code></td>
+</tr>
+<tr>
+<td>Model catalog</td>
+<td><code>platform/model-catalog/models.yaml</code> and cluster ConfigMap</td>
+<td>Treat model additions as reviewed changes</td>
+<td><code>make production-check</code></td>
+</tr>
+<tr>
+<td>Model lifecycle</td>
+<td>Approved models require promotion requests, evidence references, runtime metadata, and approved-only allowlists</td>
+<td>Review promotion requests before adding models to gateway allowlists</td>
+<td><code>make model-check</code>, <code>make model-report</code></td>
+</tr>
+<tr>
+<td>Model provenance</td>
+<td><code>platform/governance/model-provenance.yaml</code> requires source URI, immutable ref, digest, license, risk, data class, and serving profiles</td>
+<td>Replace source-reference digests with customer model-store artifact digests before production use</td>
+<td><code>make model-provenance-check</code>, <code>make model-provenance-report</code></td>
+</tr>
+<tr>
+<td>Admission control</td>
+<td>Gateway caps message count, prompt size, completion tokens, temperature, and streaming</td>
+<td>Tune limits by sandbox and runtime capacity</td>
+<td><code>test_admission_policy_rejects_unsafe_or_expensive_requests</code></td>
+</tr>
+<tr>
+<td>Prompt secret detection</td>
+<td>Gateway rejects prompts that match configured credential patterns before runtime forwarding</td>
+<td>Keep enabled for coding-agent workspaces and tune patterns only after review</td>
+<td>gateway guardrail tests, <code>make production-check</code></td>
+</tr>
+<tr>
+<td>Output guardrail</td>
+<td>Gateway inspects model completions for leaked credentials/PII/blocked content and flags, redacts, or blocks before return (OWASP LLM02:2025/LLM05:2025)</td>
+<td>Enable <code>guardrails.outputGuardrail</code>; use non-streaming for hard redact/block enforcement</td>
+<td>gateway output-guardrail tests</td>
+</tr>
+<tr>
+<td>Per-tenant RAG isolation</td>
+<td>Retrieval is scoped to the caller's tenant via the <code>owner</code> payload field stamped at ingest; enforced by default on both backends and fail-closed</td>
+<td>Keep <code>retrieval.tenantIsolation</code> enabled for multi-tenant corpora (chart local single-tenant profile turns it off); stamp each source <code>owner</code> with the tenant id; front the service with the gateway or a header-stamping proxy since the tenant id is header-asserted</td>
+<td>RAG tenant-isolation tests</td>
+</tr>
+<tr>
+<td>Validation toolchain</td>
+<td><code>platform/tools/validation-toolchain.yaml</code> declares <code>validate</code>, <code>local</code>, and <code>strict</code> profiles with a pinned Linux/CI installer</td>
+<td>Install the strict profile before customer handoff or production-readiness sign-off</td>
+<td><code>make toolchain-install</code>, <code>make toolchain-doctor</code>, <code>make validate-full</code></td>
+</tr>
+<tr>
+<td>SLO and error budget</td>
+<td><code>platform/slo/objectives.yaml</code> defines inference, eval, restore, and coding-agent platform objectives with alert references</td>
+<td>Align targets to the customer's contract and review burn-rate alerts</td>
+<td><code>make slo-check</code>, <code>make slo-report</code></td>
+</tr>
+<tr>
+<td>Sandbox budgets</td>
+<td>Gateway enforces request, prompt-character, and estimated-token ceilings by <code>X-Sandbox-ID</code></td>
+<td>Size limits by tenant and review overage events</td>
+<td><code>test_sandbox_budget_status_and_request_limit_rejection</code></td>
+</tr>
+<tr>
+<td>Shared budget backend</td>
+<td>Local/customer values use Redis-compatible shared counters for multi-replica gateways; budgets fail closed on a Redis outage while the rate limiter can opt into fail-open (<code>rateLimit.failOpen</code>, default closed)</td>
+<td>Replace bundled Redis with external managed/Sentinel/Cluster Redis (<a href="https://github.com/RamazanKara/private-ai-platform-kit/blob/main/runbooks/external-managed-stores.md">runbook</a>); choose the rate-limit fail policy per availability target</td>
+<td><code>test_redis_budget_tracker_shares_usage_across_tracker_instances</code>, <code>test_rate_limit_fail_open_admits_when_backend_down</code></td>
+</tr>
+<tr>
+<td>Quota and chargeback</td>
+<td><code>platform/governance/quota-plans.yaml</code> connects tenant quotas, gateway budgets, workspace sizing, and chargeback labels</td>
+<td>Align quota plans to customer showback or chargeback policy before onboarding tenants</td>
+<td><code>make quota-check</code>, <code>make quota-report</code></td>
+</tr>
+<tr>
+<td>Sandbox isolation</td>
+<td><code>ai-sandbox</code> namespace, quota, limits, default-deny network policy</td>
+<td>Per-team sandbox namespaces with quotas and egress allowlists</td>
+<td><code>make trace-smoke</code></td>
+</tr>
+<tr>
+<td>Tenant labs</td>
+<td><code>make tenant-up</code> and <code>make tenant-smoke</code> create team namespaces with quota, RBAC, trace contract, and network controls</td>
+<td>One namespace per team or approved experiment boundary</td>
+<td><code>make tenant-smoke</code></td>
+</tr>
+<tr>
+<td>Tenant onboarding</td>
+<td><code>TenantOnboarding</code> spec renders tenant controls and matching agent workspace values</td>
+<td>Review generated quota, RBAC, PVC, storage, and egress before apply</td>
+<td><code>make tenant-onboard</code>, <code>scripts/tenant-onboard.py --check</code></td>
+</tr>
+<tr>
+<td>Regulated offline tenant profile</td>
+<td><code>tenants/onboarding/regulated-offline-coding-agents.yaml</code> renders confidential, no-external-egress agent controls</td>
+<td>Use for offline or regulated teams and add egress only through reviewed catalog-backed changes</td>
+<td><code>make tenant-onboard-regulated</code>, <code>make production-check</code></td>
+</tr>
+<tr>
+<td>RAG service</td>
+<td>Local retrieval service returns platform context and OpenAI-compatible grounded messages</td>
+<td>Replace or extend the knowledge set with customer-approved internal docs</td>
+<td><code>make rag-smoke</code>, RAG service tests</td>
+</tr>
+<tr>
+<td>Vector RAG profile</td>
+<td><code>deploy/charts/qdrant-vector-store</code> and customer RAG values provide a persistent Qdrant backend</td>
+<td>Size storage, vector dimensions, and ingestion to the customer's embedding model and approved document pipeline</td>
+<td><code>make production-check</code>, Qdrant/RAG Helm renders</td>
+</tr>
+<tr>
+<td>Agent workspaces</td>
+<td><code>agent-workspace</code> chart creates a locked-down namespace, PVC, RBAC, trace contract, and approved egress for coding agents</td>
+<td>One workspace per team, project, or agent boundary with customer-approved external egress</td>
+<td><code>make agent-smoke</code></td>
+</tr>
+<tr>
+<td>Egress governance</td>
+<td><code>platform/network/egress-catalog.yaml</code> requires external agent egress to reference approved catalog entries</td>
+<td>Review and expire Git, package mirror, artifact, and ticketing egress entries</td>
+<td><code>make egress-check</code>, <code>make egress-report</code></td>
+</tr>
+<tr>
+<td>Chaos drills</td>
+<td>Safe rollout drills for gateway, budget Redis, Ollama, RAG, Qdrant, vLLM, and GPU capacity preflight</td>
+<td>Run after platform upgrades and before customer demos or maintenance windows</td>
+<td><code>make chaos-drill</code>, <code>DRILL=gpu-capacity-preflight RUN_SMOKE=0 make chaos-drill</code></td>
+</tr>
+<tr>
+<td>Evaluation harness</td>
+<td><code>platform/evals/smoke-suite.yaml</code>, <code>platform/evals/coding-agent-suite.yaml</code>, and <code>make eval</code> for repeatable prompt and coding-agent checks</td>
+<td>Maintain environment-specific suites and keep summaries as release evidence</td>
+<td><code>scripts/eval-suite.py --check-config</code></td>
+</tr>
+<tr>
+<td>Adversarial safety eval</td>
+<td><code>platform/evals/safety-suite.yaml</code> red-team battery (prompt-injection, jailbreak, data-exfiltration, unsafe-tool-use, and bias/fairness cases) gated by a <code>safety</code> release gate (minRefusalRate over a minCases floor)</td>
+<td>Extend the red-team suite per model and require it before promotion</td>
+<td><code>SUITE=platform/evals/safety-suite.yaml make eval</code>, <code>make release-gate</code></td>
+</tr>
+<tr>
+<td>RAG grounding eval</td>
+<td><code>scripts/rag-eval.py</code> scores retrieval plus RAGAS-style context precision and answer faithfulness</td>
+<td>Add ground-truth answers; gate on <code>minFaithfulness</code>/<code>minContextPrecision</code></td>
+<td><code>make rag-eval-check</code></td>
+</tr>
+<tr>
+<td>Model quality drift</td>
+<td>Proxy alerts (<code>governance.rules</code>) plus scheduled eval comparison</td>
+<td>Schedule evals and alert routing; roll back on threshold breach</td>
+<td><a href="https://github.com/RamazanKara/private-ai-platform-kit/blob/main/runbooks/model-drift-monitoring.md">runbooks/model-drift-monitoring.md</a></td>
+</tr>
+<tr>
+<td>Release gates</td>
+<td><code>platform/slo/release-gates.yaml</code> enforces eval, load, restore, strict toolchain, SLO, governance, supply-chain, and evidence-pack thresholds</td>
+<td>Run strict gates before demos, releases, restore reviews, and production-readiness handoff so checked-in sample evidence cannot pass</td>
+<td><code>make release-gate</code>, <code>make release-gate-strict</code>, <code>make release-report-strict</code></td>
+</tr>
+<tr>
+<td>Autoscaling</td>
+<td>KEDA ScaledObject from Prometheus request rate</td>
+<td>Tune thresholds to customer SLOs and GPU capacity</td>
+<td><code>helm template</code> in <code>make validate</code></td>
+</tr>
+<tr>
+<td>Observability</td>
+<td>Prometheus metrics, Grafana dashboards, Loki + Promtail log pipeline</td>
+<td>Centralize metrics, logs, and alerts</td>
+<td><code>make validate</code>, dashboards in <code>deploy/observability/</code></td>
+</tr>
+<tr>
+<td>Distributed tracing</td>
+<td>Gateway/RAG export OTLP spans to a Tempo backend wired as a Grafana datasource</td>
+<td>Set <code>observability.tracing</code> endpoint; size Tempo retention/storage</td>
+<td><code>make dashboard-check</code>, <code>deploy/observability/applications.yaml</code></td>
+</tr>
+<tr>
+<td>Cost and FinOps</td>
+<td>OpenCost app, gateway <code>estimated_cost_usd</code> metric + <code>/v1/usage</code>, cost dashboards</td>
+<td>Map cost-center labels to chargeback; review cost dashboards</td>
+<td><code>make dashboard-check</code>, cost panels in inference/opencost dashboards</td>
+</tr>
+<tr>
+<td>Encryption in transit</td>
+<td>Plaintext HTTP data plane by default; opt-in mTLS/cert-manager overlay provided</td>
+<td>Enable a CNI/mesh mTLS or cert-manager TLS control before regulated multi-tenant use</td>
+<td><code>deploy/clusters/customer/mtls/</code></td>
+</tr>
+<tr>
+<td>Runtime threat detection</td>
+<td>Optional Falco/Tetragon detective layer (opt-in Argo app)</td>
+<td>Deploy into a Kyverno-excluded namespace; route alerts to the log pipeline</td>
+<td><code>deploy/observability/runtime-security.yaml</code>, runbook</td>
+</tr>
+<tr>
+<td>Policy as code</td>
+<td>Kyverno required labels, resources, pod hardening, read-only root filesystems, image signature audit</td>
+<td>Enforce on AI namespaces and exclude platform operators</td>
+<td><code>make policy-test</code> when Kyverno CLI is installed</td>
+</tr>
+<tr>
+<td>Cost controls</td>
+<td>Required owner/cost/environment/sandbox labels and OpenCost app</td>
+<td>Map labels to chargeback/showback taxonomy</td>
+<td><code>make validate</code> YAML checks</td>
+</tr>
+<tr>
+<td>Secret handling</td>
+<td>External Secrets examples and no committed runtime tokens</td>
+<td>Replace local Kubernetes provider with enterprise backend</td>
+<td><code>deploy/clusters/customer/external-secrets.yaml</code></td>
+</tr>
+<tr>
+<td>Supply chain</td>
+<td>Pinned Alpine runtime images, hashed Python dependency locks, runtime-only Python dependencies, high/critical Trivy image and repo failure gates, local SBOM/SARIF/checksum evidence, Cosign digest signing, workflow artifacts, and release asset upload in CI</td>
+<td>Promote only immutable signed/scanned image digests with downloadable evidence</td>
+<td><code>make dependency-lock-check</code>, <code>make repo-security-scan</code>, <code>make image-scan</code>, <code>make supply-chain-check</code>, GitHub Actions image job</td>
+</tr>
+<tr>
+<td>Backup and restore</td>
+<td><code>restore-drill</code> application-data validation and Velero examples</td>
+<td>Run scheduled restore evidence for each critical data store</td>
+<td><code>make restore-drill</code>, <code>make backup-drill</code></td>
+</tr>
+<tr>
+<td>Disaster recovery</td>
+<td>Single-cluster DR posture with named RPO/RTO and a whole-platform restore order</td>
+<td>Provision an off-cluster backup target; design secondary-cluster/multi-region if required</td>
+<td><a href="https://github.com/RamazanKara/private-ai-platform-kit/blob/main/runbooks/disaster-recovery.md">runbooks/disaster-recovery.md</a></td>
+</tr>
+<tr>
+<td>Model cards</td>
+<td>Each approved model ships a card/datasheet referenced from the catalog</td>
+<td>Keep cards current with promotion; treat as a review artifact</td>
+<td><code>make model-check</code></td>
+</tr>
+<tr>
+<td>Load testing</td>
+<td>k6 chat-completion scenario with sandbox tags, live-gateway mode, and self-contained local gateway-path mode</td>
+<td>Store summaries and compare against SLOs</td>
+<td><code>make loadtest</code>, <code>make loadtest-local</code></td>
+</tr>
+<tr>
+<td>Evidence pack</td>
+<td>Static customer handoff report plus optional live Kubernetes readiness checks</td>
+<td>Attach reports to release, demo, restore drill, or incident review evidence</td>
+<td><code>make evidence</code>, <code>make evidence LIVE=1</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="stateful-stores-devreference-footprints-and-their-ha-path">Stateful stores: dev/reference footprints and their HA path<a class="headerlink" href="#stateful-stores-devreference-footprints-and-their-ha-path" title="Permanent link">&para;</a></h2>
+<p>Three bundled stateful stores ship as <strong>single-node reference footprints</strong> so a laptop lab and
+a fresh cluster start with no external dependencies. They are deliberately not production
+topologies. State this plainly to any operator sizing a production environment, and swap each to
+its external/HA path before a regulated or multi-tenant handoff. The full opt-in procedure
+(with rollback) is in the <a href="https://github.com/RamazanKara/private-ai-platform-kit/blob/main/runbooks/external-managed-stores.md">external / managed stores runbook</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Bundled store</th>
+<th>Reference footprint</th>
+<th>Production / HA path</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Budget / response-cache Redis (<code>deploy/charts/budget-redis</code>)</td>
+<td>1 replica, no persistence, <code>minAvailable: 0</code> (a restart drops counters; an outage fails budgets closed)</td>
+<td>Point <code>budget.redisUrl</code> / <code>responseCache.redisUrl</code> at an external <strong>managed Redis, Redis Sentinel failover pair, or Redis Cluster</strong> and stop syncing the bundled Application. Budgets stay fail-closed on outage; the rate limiter can opt into fail-open (<code>rateLimit.failOpen</code>) as an availability-vs-enforcement tradeoff</td>
+</tr>
+<tr>
+<td>Qdrant vector store (<code>deploy/charts/qdrant-vector-store</code>)</td>
+<td>Single-instance, <strong>schema-enforced</strong> (<code>replicaCount</code> max 1) on one RWO PVC</td>
+<td>Use an <strong>external managed Qdrant or a Qdrant cluster</strong> (sharded/replicated) and point <code>retrieval.vectorStore.url</code> at it; the bundled chart intentionally does not model clustering</td>
+</tr>
+<tr>
+<td>Loki (<code>deploy/observability/applications.yaml</code>)</td>
+<td><code>SingleBinary</code>, <code>replication_factor: 1</code>, filesystem storage</td>
+<td>Move to a <strong>scalable/distributed Loki mode with object storage and replication</strong>; forward the tamper-evident audit receipts onward to a SIEM for durable long-term hold</td>
+</tr>
+</tbody>
+</table>
+<p>These three are the "external HA stores" operator-owned item tracked in
+<a href="../scope-and-non-goals/">Scope and non-goals</a>; the bundled charts are working references and are
+never removed, so rolling back to the reference footprint for a demo is a one-line values change.</p>
+<h2 id="promotion-review">Promotion Review<a class="headerlink" href="#promotion-review" title="Permanent link">&para;</a></h2>
+<p>Use the matrix above as the source of truth, then review this shorter sequence before a customer handoff or production-style demo:</p>
+<ul>
+<li>Run <code>make validate-full</code>, <code>make api-contract</code>, <code>make config-contract</code>, and <code>make release-gate-strict</code> against current evidence.</li>
+<li>Confirm auth, prompt redaction, model allowlists, sandbox budgets, quota labels, and NetworkPolicies match the target environment.</li>
+<li>Review tenant onboarding output before applying it; regulated/offline tenants must keep external CIDR egress disabled.</li>
+<li>Verify RAG knowledge, vector-store dimensions, GPU resource names, runtime replicas, HPA/PDB settings, and topology spread against customer capacity.</li>
+<li>Run smoke, RAG, agent, eval, load, restore, and chaos evidence paths that are relevant to the handoff.</li>
+<li>Confirm image scan, SBOM, checksum, signature, and repo security evidence exists for the images being promoted.</li>
+<li>Generate an Evidence pack and attach the Markdown report to the handoff notes; retain JSON evidence with the release or drill record.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Maintained by fluentorbit as project steward. Licensed under Apache-2.0.
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.tracking", "navigation.indexes", "content.code.copy", "content.action.edit", "search.suggest", "search.highlight", "toc.follow"], "search": "../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.88dd0f4e.min.js"></script>
+      
+    
+  </body>
+</html>
