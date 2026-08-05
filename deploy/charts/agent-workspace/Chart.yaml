@@ -2,8 +2,8 @@ apiVersion: v2
 name: agent-workspace
 description: Isolated namespace template for coding agents that use the Private AI Platform Kit gateway and RAG service.
 type: application
-version: 0.28.0
-appVersion: "0.28.0"
+version: 0.28.1
+appVersion: "0.28.1"
 kubeVersion: ">=1.25.0"
 home: https://github.com/RamazanKara/private-ai-platform-kit
 sources:

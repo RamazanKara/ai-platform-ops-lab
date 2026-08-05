@@ -2,7 +2,7 @@ apiVersion: v2
 name: qdrant-vector-store
 description: Optional local vector store profile for Private AI Platform Kit RAG.
 type: application
-version: 0.28.0
+version: 0.28.1
 appVersion: "1.18.1"
 kubeVersion: ">=1.25.0"
 home: https://github.com/RamazanKara/private-ai-platform-kit

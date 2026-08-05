@@ -6,8 +6,8 @@ description: >-
   component is toggled with its <name>.enabled flag. GitOps (Argo CD) remains the recommended
   path for multi-namespace installs; this chart is for a single-command dev/demo bring-up.
 type: application
-version: 0.28.0
-appVersion: "0.28.0"
+version: 0.28.1
+appVersion: "0.28.1"
 home: https://github.com/RamazanKara/private-ai-platform-kit
 keywords:
   - private-ai
@@ -32,26 +32,26 @@ annotations:
       url: https://github.com/RamazanKara/private-ai-platform-kit/issues
 dependencies:
   - name: inference-gateway
-    version: "0.28.0"
+    version: "0.28.1"
     repository: "file://../inference-gateway"
     condition: inference-gateway.enabled
   - name: rag-service
-    version: "0.28.0"
+    version: "0.28.1"
     repository: "file://../rag-service"
     condition: rag-service.enabled
   - name: ollama
-    version: "0.28.0"
+    version: "0.28.1"
     repository: "file://../ollama"
     condition: ollama.enabled
   - name: budget-redis
-    version: "0.28.0"
+    version: "0.28.1"
     repository: "file://../budget-redis"
     condition: budget-redis.enabled
   - name: qdrant-vector-store
-    version: "0.28.0"
+    version: "0.28.1"
     repository: "file://../qdrant-vector-store"
     condition: qdrant-vector-store.enabled
   - name: vllm
-    version: "0.28.0"
+    version: "0.28.1"
     repository: "file://../vllm"
     condition: vllm.enabled

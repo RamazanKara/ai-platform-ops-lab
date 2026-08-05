@@ -1,6 +1,6 @@
 # Feature inventory
 
-This is the release-level source of truth for what `v0.28.0` implements, what is enabled by
+This is the release-level source of truth for what `v0.28.1` implements, what is enabled by
 default, and what remains operator-owned. “Shipped” means code, configuration, tests, and an
 operator path exist in this repository; it does not mean a customer-specific integration is
 configured.

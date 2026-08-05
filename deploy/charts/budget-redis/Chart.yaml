@@ -2,7 +2,7 @@ apiVersion: v2
 name: budget-redis
 description: Local Redis-compatible store for shared sandbox budget accounting.
 type: application
-version: 0.28.0
+version: 0.28.1
 appVersion: "8.0"
 kubeVersion: ">=1.25.0"
 home: https://github.com/RamazanKara/private-ai-platform-kit

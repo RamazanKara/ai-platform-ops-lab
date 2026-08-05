@@ -71,7 +71,7 @@ from app.settings import (
 )
 from app.tracing import configure_tracing, trace_request
 
-SERVICE_VERSION = "0.28.0"
+SERVICE_VERSION = "0.28.1"
 OPENAPI_DESCRIPTION = (
     "OpenAI-compatible private inference gateway with sandbox traceability, "
     "admission controls, budget enforcement, redacted audit events, and "

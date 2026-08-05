@@ -10,9 +10,9 @@ documentation is retained by `mike`.
 The umbrella chart is the recommended public entry point:
 
 ```bash
-helm pull oci://ghcr.io/ramazankara/private-ai-platform-kit/charts/platform --version 0.28.0
+helm pull oci://ghcr.io/ramazankara/private-ai-platform-kit/charts/platform --version 0.28.1
 helm install private-ai oci://ghcr.io/ramazankara/private-ai-platform-kit/charts/platform \
-  --version 0.28.0 --namespace ai-platform --create-namespace
+  --version 0.28.1 --namespace ai-platform --create-namespace
 ```
 
 Release CI publishes `artifacthub-repo.yml` to the chart repository's special
@@ -24,7 +24,7 @@ release. This external registration cannot be completed from repository code.
 ## Python package
 
 ```bash
-python -m pip install private-ai-platform-kit-client==0.28.0
+python -m pip install private-ai-platform-kit-client==0.28.1
 ```
 
 Before the first publish, register a pending PyPI Trusted Publisher with owner

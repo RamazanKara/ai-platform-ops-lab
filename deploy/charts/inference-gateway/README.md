@@ -108,7 +108,7 @@ Run `make config-contract` after changing settings, env vars, Helm values, or ch
 | `guardrails.promptSecretDetection.patterns` | `["private_key", "github_token", "slack_token", "aws_access_key_id", "google_api_key", "bearer_token", "generic_api_ke...` |
 | `image.pullPolicy` | `IfNotPresent` |
 | `image.repository` | `ghcr.io/ramazankara/private-ai-platform-kit/inference-gateway` |
-| `image.tag` | `v0.28.0` |
+| `image.tag` | `v0.28.1` |
 | `ingress.annotations` | `{}` |
 | `ingress.className` | `""` |
 | `ingress.enabled` | `false` |

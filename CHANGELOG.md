@@ -4,6 +4,30 @@ All notable changes to this project are documented in this file. The format is b
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.28.1 - 2026-08-05
+
+Internal reorganization of the gateway with zero behavior change, verified by byte-identical
+OpenAPI and configuration-contract snapshots against v0.28.0.
+
+### Changed
+
+- **One shared governance rail instead of five copies.** Every inference handler carried a
+  private ~90-line tail mapping the failure taxonomy onto the OpenAI error envelope and
+  recording metrics, settlement, and the audit receipt; v0.28.0's streaming work added two more
+  stream-recording copies on top. `app/governance.py` is that tail written once (a `GovernedCall`
+  state object, a `governed` context manager, `record_stream_end` for streaming bodies, and the
+  shared single-route prologue), so a change to admission, settlement, or receipt shape is now
+  one edit instead of seven.
+- **`main.py` split into route modules**, following the `register_batch_routes` idiom the
+  codebase already used for the async batch API. `main.py` drops from 2,429 to 472 lines (app
+  assembly, middleware, health) with the endpoint handlers moved to `inference_api.py`,
+  `messages_api.py`, `responses_api.py`, and `sandbox_api.py`. The audit lifecycle
+  (`write_audit_log`, `open_audit_chain`, `persist_audit_head`) moved next to the chain
+  primitives in `audit.py`.
+- Development loop: `pytest` now works from any working directory (a `conftest.py` per service
+  root), the four private `FakeRuntimeClient` test-fake copies collapsed into the one canonical
+  fake in `tests/gateway_support.py`, and `make test` runs both service suites.
+
 ## v0.28.0 - 2026-08-04
 
 This release closes the distance between two things the project claimed and two it measured.
