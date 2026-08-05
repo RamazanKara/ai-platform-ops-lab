@@ -1,14 +1,12 @@
 import json
 import logging
 
-import app.streaming
 import httpx
-from app import inference_api
+from app import inference_api, streaming
 from app.main import create_app
 from app.policy import ModelRoute, ModelRoutingPolicy
 from app.runtime_client import sanitize_chat_completion
 from app.settings import Settings
-from app.streaming import _usage_from_sse_chunk
 from fastapi.testclient import TestClient
 
 from tests.gateway_support import (
@@ -536,15 +534,15 @@ def test_usage_from_sse_chunk_skips_parsing_delta_chunks_without_usage(monkeypat
     def _fail(*args, **kwargs):
         raise AssertionError("chunks without a usage member must not be JSON-parsed")
 
-    monkeypatch.setattr(app.streaming.json, "loads", _fail)
+    monkeypatch.setattr(streaming.json, "loads", _fail)
 
     chunk = b'data: {"choices":[{"delta":{"content":"hel"}}]}\n\ndata: [DONE]\n\n'
-    assert _usage_from_sse_chunk(chunk) is None
+    assert streaming._usage_from_sse_chunk(chunk) is None
 
 
 def test_usage_from_sse_chunk_extracts_terminal_usage_object():
     chunk = b'data: {"choices":[],"usage":{"prompt_tokens":7,"completion_tokens":3,"total_tokens":10}}\n\n'
-    assert _usage_from_sse_chunk(chunk) == {
+    assert streaming._usage_from_sse_chunk(chunk) == {
         "prompt_tokens": 7,
         "completion_tokens": 3,
         "total_tokens": 10,
@@ -555,7 +553,7 @@ def test_usage_from_sse_chunk_ignores_null_usage():
     # Interim events in some runtimes carry `"usage": null`; the literal is present,
     # so the line is parsed and rejected by the isinstance check, same as before.
     chunk = b'data: {"choices":[{"delta":{"content":"x"}}],"usage": null}\n\n'
-    assert _usage_from_sse_chunk(chunk) is None
+    assert streaming._usage_from_sse_chunk(chunk) is None
 
 
 def test_usage_from_sse_chunk_finds_usage_in_multi_event_chunk():
@@ -564,7 +562,7 @@ def test_usage_from_sse_chunk_finds_usage_in_multi_event_chunk():
         b'data: {"choices":[],"usage":{"total_tokens":4}}\n\n'
         b"data: [DONE]\n\n"
     )
-    assert _usage_from_sse_chunk(chunk) == {"total_tokens": 4}
+    assert streaming._usage_from_sse_chunk(chunk) == {"total_tokens": 4}
 
 
 def test_chat_completion_uses_default_model_when_model_is_omitted():

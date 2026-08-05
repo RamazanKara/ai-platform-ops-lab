@@ -13,6 +13,7 @@ import asyncio
 import json
 import logging
 import random
+from operator import itemgetter
 from time import perf_counter, time
 from typing import Any
 
@@ -540,7 +541,7 @@ def register_inference_routes(app: FastAPI, settings: Settings) -> None:
                     "sandbox_id": request.state.sandbox_id,
                     "principal": getattr(request.state, "principal", None),
                     "batch_size": len(payload.requests),
-                    "items": sorted(audit_items, key=lambda entry: entry["index"]),
+                    "items": sorted(audit_items, key=itemgetter("index")),
                     "status_code": status_code,
                     "latency_ms": round(latency_seconds * 1000, 2),
                     "ts": time(),
