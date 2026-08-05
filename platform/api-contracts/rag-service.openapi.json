@@ -119,7 +119,7 @@
   "info": {
     "description": "Private retrieval service for platform and customer knowledge. The service returns traceable retrieval results, optional context blocks, and OpenAI-compatible grounded messages for downstream chat-completion calls.",
     "title": "Private AI Platform Kit RAG Service",
-    "version": "0.28.0"
+    "version": "0.28.1"
   },
   "openapi": "3.1.0",
   "paths": {

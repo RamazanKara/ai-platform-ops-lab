@@ -13,7 +13,7 @@ authors:
 repository-code: "https://github.com/RamazanKara/private-ai-platform-kit"
 url: "https://github.com/RamazanKara/private-ai-platform-kit"
 license: Apache-2.0
-version: 0.28.0
+version: 0.28.1
 date-released: "2026-07-18"
 keywords:
   - kubernetes

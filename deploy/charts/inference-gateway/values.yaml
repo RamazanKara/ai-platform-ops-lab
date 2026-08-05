@@ -3,7 +3,7 @@ replicaCount: 1
 image:
   repository: ghcr.io/ramazankara/private-ai-platform-kit/inference-gateway
   # First-party image: release CI pins the published digest (set image.digest) after build.
-  tag: "v0.28.0"
+  tag: "v0.28.1"
   pullPolicy: IfNotPresent
 
 runtime:

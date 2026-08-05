@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "private-ai-platform-kit-client"
-version = "0.28.0"
+version = "0.28.1"
 description = "First-party Python client for the Private AI Platform Kit inference gateway."
 readme = "../README.md"
 requires-python = ">=3.11"

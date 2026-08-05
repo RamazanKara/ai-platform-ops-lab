@@ -1,6 +1,6 @@
 # Security overview
 
-This page summarizes the security-relevant defaults in release `v0.28.0`. The [threat model](threat-model.md) has the detailed trust boundaries and residual risks. The [production readiness matrix](production-readiness.md) lists validation commands.
+This page summarizes the security-relevant defaults in release `v0.28.1`. The [threat model](threat-model.md) has the detailed trust boundaries and residual risks. The [production readiness matrix](production-readiness.md) lists validation commands.
 
 ## Defaults that matter
 
