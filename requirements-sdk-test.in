@@ -1,4 +1,4 @@
 # Minimal, hash-pinned dependencies for testing the standalone Python SDK.
 # Regenerate: pip-compile --generate-hashes --output-file=requirements-sdk-test.lock requirements-sdk-test.in
 httpx==0.28.1
-pytest==9.0.3
+pytest==9.1.1
