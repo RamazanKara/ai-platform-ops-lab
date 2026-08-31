@@ -128,7 +128,7 @@ jobs:
           python -m pip install --no-deps --target /tmp/sdk-smoke sdk-dist/*.whl
           PYTHONPATH=/tmp/sdk-smoke python -c 'from ai_platform_client import GatewayClient; print(GatewayClient.__name__)'
           sha256sum sdk-dist/* > sdk-checksums.txt
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4  # v5.0.0
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: python-sdk-${{ github.sha }}
           if-no-files-found: error
@@ -403,7 +403,7 @@ jobs:
               --bundle chart-packages/chart-release-manifest.sigstore.json \
               chart-packages/chart-release-manifest.json
           fi
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4  # v5.0.0
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: supply-chain-evidence-${{ github.sha }}
           if-no-files-found: error
@@ -526,7 +526,7 @@ jobs:
           make slo-report
           make evidence
           make release-gate-strict
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4  # v5.0.0
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         if: always()
         with:
           name: scheduled-proof-evidence-${{ github.run_id }}
@@ -597,7 +597,7 @@ jobs:
       - name: Cleanup local cluster
         if: always()
         run: make local-down
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4  # v5.0.0
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         if: always()
         with:
           name: local-e2e-evidence-${{ github.run_id }}
