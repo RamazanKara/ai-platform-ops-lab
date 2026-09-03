@@ -1,4 +1,4 @@
 # Documentation site toolchain (mkdocs-material). Hash-pinned lock.
 # Regenerate: pip-compile --generate-hashes --output-file=requirements-docs.txt requirements-docs.in
-mkdocs-material==9.5.49
+mkdocs-material==9.7.7
 mike==2.2.0
